@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{736D6143-4570-4929-BAD3-94EA200E698C}</ProjectGuid>
+    <RootNamespace>lmpc</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries Condition="$(Configuration)=='Debug'">true</UseDebugLibraries>
+    <UseDebugLibraries Condition="$(Configuration)!='Debug'">false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup>
+    <OutDir>bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>LMPCServer</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <CallingConvention>StdCall</CallingConvention>
+      <DebugInformationFormat Condition="$(Configuration)=='Debug'">ProgramDatabase</DebugInformationFormat>
+      <DebugInformationFormat Condition="$(Configuration)!='Debug'">None</DebugInformationFormat>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <OmitDefaultLibName>true</OmitDefaultLibName>
+      <OmitFramePointers>true</OmitFramePointers>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="$(Configuration)=='Debug'">_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="$(Configuration)!='Debug'">NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling Condition="$(Configuration)!='Debug'">true</StringPooling>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>kernel32.lib</AdditionalDependencies>
+      <AdditionalManifestDependencies>type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'</AdditionalManifestDependencies>
+      <AllowIsolation>false</AllowIsolation>
+      <BaseAddress Condition="$(Platform)=='Win32'">0x01000000</BaseAddress>
+      <BaseAddress Condition="$(Platform)=='x64'">0x0000000100000000</BaseAddress>
+      <EnableCOMDATFolding Condition="$(Configuration)!='Debug'">true</EnableCOMDATFolding>
+      <GenerateDebugInformation Condition="$(Configuration)=='Debug'">true</GenerateDebugInformation>
+      <GenerateDebugInformation Condition="$(Configuration)!='Debug'">false</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <LargeAddressAware>true</LargeAddressAware>
+      <SetChecksum Condition="$(Configuration)!='Debug'">true</SetChecksum>
+      <SubSystem>Windows</SubSystem>
+      <Version>1.0</Version>
+    </Link>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
+    <ResourceCompile>
+      <PreprocessorDefinitions Condition="$(Configuration)=='Debug'">_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="$(Configuration)!='Debug'">NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="lmpc.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="lmpc.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>
