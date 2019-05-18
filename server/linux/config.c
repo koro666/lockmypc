@@ -8,7 +8,7 @@
 static const char cfg_filename[] = "lmpc.conf";
 
 static const char cfg_default_address[] = "";
-static const char cfg_default_port[] = "1024";
+static const char cfg_default_port[] = "43666";
 static const char cfg_default_secret[] = "default";
 static const char cfg_default_command[] = "xscreensaver-command -lock";
 

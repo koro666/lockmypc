@@ -42,7 +42,7 @@ def serve(address, port, secret):
 
 def main(argv):
 	address = argv[0] if len(argv) >= 1 else '127.0.0.1'
-	port = int(argv[1]) if len(argv) >= 2 else 1024
+	port = int(argv[1]) if len(argv) >= 2 else 43666
 	secret = argv[2] if len(argv) >= 3 else 'default'
 
 	serve(address, port, secret)
