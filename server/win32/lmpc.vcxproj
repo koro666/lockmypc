@@ -48,10 +48,11 @@
       <CallingConvention>StdCall</CallingConvention>
       <DebugInformationFormat Condition="$(Configuration)=='Debug'">ProgramDatabase</DebugInformationFormat>
       <DebugInformationFormat Condition="$(Configuration)!='Debug'">None</DebugInformationFormat>
+      <DisableSpecificWarnings>4204;4706</DisableSpecificWarnings>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <OmitDefaultLibName>true</OmitDefaultLibName>
       <OmitFramePointers>true</OmitFramePointers>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="$(Configuration)=='Debug'">_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="$(Configuration)!='Debug'">NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling Condition="$(Configuration)!='Debug'">true</StringPooling>
@@ -59,9 +60,8 @@
       <WarningLevel>Level4</WarningLevel>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>kernel32.lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;comctl32.lib;shell32.lib;ws2_32.lib</AdditionalDependencies>
       <AdditionalManifestDependencies>type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'</AdditionalManifestDependencies>
-      <AllowIsolation>false</AllowIsolation>
       <BaseAddress Condition="$(Platform)=='Win32'">0x01000000</BaseAddress>
       <BaseAddress Condition="$(Platform)=='x64'">0x0000000100000000</BaseAddress>
       <EnableCOMDATFolding Condition="$(Configuration)!='Debug'">true</EnableCOMDATFolding>
@@ -82,10 +82,16 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="display.c" />
     <ClCompile Include="lmpc.c" />
+    <ClCompile Include="server.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="lmpc.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="display.h" />
+    <ClInclude Include="server.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
