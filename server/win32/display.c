@@ -15,6 +15,7 @@ static HICON LmpcUiIcon;
 static ATOM LmpcUiAtom;
 static UINT LmpcUiTaskbarMessage;
 static HWND LmpcUiWindow;
+static HWND LmpcUiDialog;
 
 HRESULT LmpcUiInitialize(void)
 {
@@ -29,7 +30,7 @@ HRESULT LmpcUiInitialize(void)
 	static const INITCOMMONCONTROLSEX iccx =
 	{
 		.dwSize = sizeof(INITCOMMONCONTROLSEX),
-		.dwICC = ICC_STANDARD_CLASSES
+		.dwICC =  ICC_UPDOWN_CLASS | ICC_STANDARD_CLASSES | ICC_LINK_CLASS
 	};
 
 	if (!InitCommonControlsEx(&iccx))
@@ -128,6 +129,9 @@ HRESULT LmpcUiRunLoop(void)
 		if (b == -1)
 			return HRESULT_FROM_WIN32(GetLastError());
 
+		if (LmpcUiDialog && IsDialogMessage(LmpcUiDialog, &m))
+			continue;
+
 		TranslateMessage(&m);
 		DispatchMessage(&m);
 	}
@@ -149,18 +153,10 @@ LRESULT CALLBACK LmpcUiWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		case WM_ENDSESSION:
 			PostQuitMessage(0);
 			return 0;
+		case WM_COMMAND:
+			return LmpcUiHandleCommand(hWnd, wParam, lParam);
 		case WM_USER:
-			switch (lParam)
-			{
-				case MAKELPARAM(WM_CONTEXTMENU, 0):
-					LmpcUiShowMenu(hWnd, GET_X_LPARAM(wParam), GET_Y_LPARAM(wParam));
-					break;
-				case MAKELPARAM(WM_LBUTTONDBLCLK, 0):
-				case MAKELPARAM(NIN_KEYSELECT, 0):
-					SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_SETTINGS, 0), 0);
-					break;
-			}
-			return 0;
+			return LmpcUiHandleNotifyMessage(hWnd, wParam, lParam);
 		default:
 			if (uMsg == LmpcUiTaskbarMessage)
 			{
@@ -169,6 +165,117 @@ LRESULT CALLBACK LmpcUiWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			}
 
 			return DefWindowProc(hWnd, uMsg, wParam, lParam);
+	}
+}
+
+LRESULT LmpcUiHandleCommand(HWND hWnd, WPARAM wParam, LPARAM lParam)
+{
+	switch (LOWORD(wParam))
+	{
+		case IDC_SETTINGS:
+			if (LmpcUiDialog)
+			{
+				SetForegroundWindow(LmpcUiDialog);
+			}
+			else
+			{
+				LmpcUiDialog = CreateDialogParam(THIS_HINSTANCE, MAKEINTRESOURCE(IDD_SETTINGS), NULL, LmpcUiDlgProc, 0);
+				ShowWindow(LmpcUiDialog, SW_SHOW);
+			}
+			break;
+		case IDC_EXIT:
+			if (LmpcUiDialog)
+				SendMessage(LmpcUiDialog, WM_CLOSE, 0, 0);
+			SendMessage(hWnd, WM_CLOSE, 0, 0);
+			break;
+	}
+
+	UNREFERENCED_PARAMETER(lParam);
+	return 0;
+}
+
+LRESULT LmpcUiHandleNotifyMessage(HWND hWnd, WPARAM wParam, LPARAM lParam)
+{
+	switch (lParam)
+	{
+		case MAKELPARAM(WM_CONTEXTMENU, 0):
+			LmpcUiShowMenu(hWnd, GET_X_LPARAM(wParam), GET_Y_LPARAM(wParam));
+			break;
+		case MAKELPARAM(WM_LBUTTONDBLCLK, 0):
+		case MAKELPARAM(NIN_KEYSELECT, 0):
+			SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_SETTINGS, 0), 0);
+			break;
+	}
+
+	return 0;
+}
+
+INT_PTR LmpcUiDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	switch (uMsg)
+	{
+		case WM_INITDIALOG:
+		{
+			WCHAR buffer[256];
+
+			SendDlgItemMessage(hWnd, IDC_SETTINGS_HOST, EM_LIMITTEXT, 256, 0);
+			if (LoadStringW(THIS_HINSTANCE, IDS_HOST_DEFAULT, buffer, ARRAYSIZE(buffer)))
+				SendDlgItemMessage(hWnd, IDC_SETTINGS_HOST, EM_SETCUEBANNER, TRUE, (LPARAM)buffer);
+			SetDlgItemText(hWnd, IDC_SETTINGS_HOST, TEXT("")); // TODO: from config
+
+			SendDlgItemMessage(hWnd, IDC_SETTINGS_PORT, EM_LIMITTEXT, 5, 0);
+			SetDlgItemText(hWnd, IDC_SETTINGS_PORT, TEXT("43666")); // TODO: from config
+
+			SendDlgItemMessage(hWnd, IDC_SETTINGS_PORT_SPIN, UDM_SETRANGE32, 1, 65535);
+
+			SetDlgItemText(hWnd, IDC_SETTINGS_SECRET, TEXT("default")); // TODO: from config
+			return TRUE;
+		}
+		case WM_COMMAND:
+		{
+			switch (wParam)
+			{
+				case MAKEWPARAM(IDOK, BN_CLICKED):
+				{
+					// TODO:
+					return TRUE;
+				}
+				case MAKEWPARAM(IDCANCEL, BN_CLICKED):
+				{
+					DestroyWindow(hWnd);
+					LmpcUiDialog = NULL;
+					return TRUE;
+				}
+			}
+			return FALSE;
+		}
+		case WM_NOTIFY:
+		{
+			LPNMHDR nmhdr = (LPNMHDR)lParam;
+			if (nmhdr->idFrom == IDC_SETTINGS_HLINK &&
+				(nmhdr->code == NM_CLICK || nmhdr->code == NM_RETURN))
+			{
+				PNMLINK nmlink = (PNMLINK)lParam;
+
+				SHELLEXECUTEINFOW sei =
+				{
+					.cbSize = sizeof(SHELLEXECUTEINFOW),
+					.fMask = SEE_MASK_NOASYNC | SEE_MASK_FLAG_NO_UI | SEE_MASK_HMONITOR,
+					.lpVerb = L"open",
+					.lpFile = nmlink->item.szUrl,
+					.nShow = SW_SHOW,
+					.hMonitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST)
+				};
+
+				ShellExecuteExW(&sei);
+				return TRUE;
+			}
+			return FALSE;
+		}
+		default:
+		{
+			return FALSE;
+		}
 	}
 }
 
