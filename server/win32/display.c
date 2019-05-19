@@ -5,6 +5,7 @@
 #include <tchar.h>
 #include "display.h"
 #include "resource.h"
+#include "config.h"
 
 extern IMAGE_DOS_HEADER __ImageBase;
 #define THIS_HINSTANCE ((HINSTANCE)&__ImageBase)
@@ -221,14 +222,14 @@ INT_PTR LmpcUiDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			SendDlgItemMessage(hWnd, IDC_SETTINGS_HOST, EM_LIMITTEXT, 256, 0);
 			if (LoadStringW(THIS_HINSTANCE, IDS_HOST_DEFAULT, buffer, ARRAYSIZE(buffer)))
 				SendDlgItemMessage(hWnd, IDC_SETTINGS_HOST, EM_SETCUEBANNER, TRUE, (LPARAM)buffer);
-			SetDlgItemText(hWnd, IDC_SETTINGS_HOST, TEXT("")); // TODO: from config
+			SetDlgItemText(hWnd, IDC_SETTINGS_HOST, LmpcCfgCurrent.Address);
 
 			SendDlgItemMessage(hWnd, IDC_SETTINGS_PORT, EM_LIMITTEXT, 5, 0);
-			SetDlgItemText(hWnd, IDC_SETTINGS_PORT, TEXT("43666")); // TODO: from config
+			SetDlgItemText(hWnd, IDC_SETTINGS_PORT, LmpcCfgCurrent.Port);
 
 			SendDlgItemMessage(hWnd, IDC_SETTINGS_PORT_SPIN, UDM_SETRANGE32, 1, 65535);
 
-			SetDlgItemText(hWnd, IDC_SETTINGS_SECRET, TEXT("default")); // TODO: from config
+			SetDlgItemText(hWnd, IDC_SETTINGS_SECRET, LmpcCfgCurrent.Secret);
 			return TRUE;
 		}
 		case WM_COMMAND:
@@ -237,8 +238,11 @@ INT_PTR LmpcUiDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
 				case MAKEWPARAM(IDOK, BN_CLICKED):
 				{
-					// TODO:
-					return TRUE;
+					LmpcCfgStringSet(hWnd, IDC_SETTINGS_HOST, &LmpcCfgCurrent.Address);
+					LmpcCfgStringSet(hWnd, IDC_SETTINGS_PORT, &LmpcCfgCurrent.Port);
+					LmpcCfgStringSet(hWnd, IDC_SETTINGS_SECRET, &LmpcCfgCurrent.Secret);
+					LmpcCfgSave();
+					// fallthrough
 				}
 				case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 				{

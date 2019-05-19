@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <objbase.h>
+#include "config.h"
 #include "server.h"
 #include "display.h"
 
@@ -11,9 +12,13 @@ __declspec(noreturn) void WinMainCRTStartup(void)
 	if (FAILED(hr))
 		goto exit;
 
-	hr = LmpcSrvInitialize();
+	hr = LmpcCfgInitialize();
 	if (FAILED(hr))
 		goto clean_com;
+
+	hr = LmpcSrvInitialize();
+	if (FAILED(hr))
+		goto clean_cfg;
 
 	hr = RegisterApplicationRestart(NULL, 0);
 	if (FAILED(hr))
@@ -33,6 +38,9 @@ clean_restart:
 
 clean_server:
 	LmpcSrvFinalize();
+
+clean_cfg:
+	LmpcCfgFinalize();
 
 clean_com:
 	CoUninitialize();

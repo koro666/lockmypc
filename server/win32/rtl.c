@@ -1,7 +1,5 @@
 #include <windows.h>
-
-#undef RtlFillMemory
-WINBASEAPI VOID WINAPI RtlFillMemory(VOID UNALIGNED* Destination, SIZE_T Length, UCHAR Fill);
+#include "rtl.h"
 
 void* __cdecl memset(void* dest, int c, size_t count)
 {
