@@ -1,10 +1,21 @@
 #include <winres.h>
+#include "resource.h"
 
-1 ICON lmpc.ico
+IDI_MAIN ICON lmpc.ico
+
+IDR_MENU MENU
+BEGIN
+	POPUP ""
+	BEGIN
+		MENUITEM "&Settings", IDC_SETTINGS
+		MENUITEM SEPARATOR
+		MENUITEM "E&xit", IDC_EXIT
+	END
+END
 
 STRINGTABLE
 BEGIN
-	1 "LockMyPC"
+	IDS_APPNAME "LockMyPC"
 END
 
 VS_VERSION_INFO VERSIONINFO

@@ -1,8 +1,10 @@
 #include <windows.h>
+#include <windowsx.h>
 #include <commctrl.h>
 #include <shellapi.h>
 #include <tchar.h>
 #include "display.h"
+#include "resource.h"
 
 extern IMAGE_DOS_HEADER __ImageBase;
 #define THIS_HINSTANCE ((HINSTANCE)&__ImageBase)
@@ -60,7 +62,7 @@ HRESULT LmpcUiInitialize(void)
 
 	hr = LoadIconMetric(
 		THIS_HINSTANCE,
-		MAKEINTRESOURCE(1),
+		MAKEINTRESOURCE(IDI_MAIN),
 		LIM_SMALL,
 		&LmpcUiIcon);
 
@@ -147,6 +149,18 @@ LRESULT CALLBACK LmpcUiWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		case WM_ENDSESSION:
 			PostQuitMessage(0);
 			return 0;
+		case WM_USER:
+			switch (lParam)
+			{
+				case MAKELPARAM(WM_CONTEXTMENU, 0):
+					LmpcUiShowMenu(hWnd, GET_X_LPARAM(wParam), GET_Y_LPARAM(wParam));
+					break;
+				case MAKELPARAM(WM_LBUTTONDBLCLK, 0):
+				case MAKELPARAM(NIN_KEYSELECT, 0):
+					SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_SETTINGS, 0), 0);
+					break;
+			}
+			return 0;
 		default:
 			if (uMsg == LmpcUiTaskbarMessage)
 			{
@@ -166,12 +180,12 @@ void LmpcUiCreateNotifyIcon(HWND hWnd)
 			.cbSize = sizeof(NOTIFYICONDATA),
 			.hWnd = hWnd,
 			.uID = 0,
-			.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP,
+			.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP | NIF_SHOWTIP,
 			.uCallbackMessage = WM_USER,
 			.hIcon = LmpcUiIcon
 		};
 
-		if (!LoadString(THIS_HINSTANCE, 1, nid.szTip, ARRAYSIZE(nid.szTip)))
+		if (!LoadString(THIS_HINSTANCE, IDS_APPNAME, nid.szTip, ARRAYSIZE(nid.szTip)))
 			return;
 
 		if (!Shell_NotifyIcon(NIM_ADD, &nid))
@@ -201,4 +215,18 @@ void LmpcUiRemoveNotifyIcon(HWND hWnd)
 	};
 
 	Shell_NotifyIcon(NIM_DELETE, &nid);
+}
+
+void LmpcUiShowMenu(HWND hWnd, int x, int y)
+{
+	HMENU hMenu = LoadMenu(THIS_HINSTANCE, MAKEINTRESOURCE(IDR_MENU));
+	if (!hMenu)
+		return;
+
+	HMENU hSubMenu = GetSubMenu(hMenu, 0);
+	SetMenuDefaultItem(hSubMenu, IDC_SETTINGS, FALSE);
+
+	SetForegroundWindow(hWnd);
+	TrackPopupMenu(hSubMenu, 0, x, y, 0, hWnd, NULL);
+	DestroyMenu(hMenu);
 }
