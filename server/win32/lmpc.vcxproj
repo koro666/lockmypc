@@ -84,6 +84,9 @@
   <ItemGroup>
     <ClCompile Include="display.c" />
     <ClCompile Include="lmpc.c" />
+    <ClCompile Include="rtl.c">
+      <IntrinsicFunctions>false</IntrinsicFunctions>
+    </ClCompile>
     <ClCompile Include="server.c" />
   </ItemGroup>
   <ItemGroup>
