@@ -87,6 +87,7 @@
     <ClCompile Include="lmpc.c" />
     <ClCompile Include="rtl.c">
       <IntrinsicFunctions>false</IntrinsicFunctions>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
     <ClCompile Include="server.c" />
   </ItemGroup>
