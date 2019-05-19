@@ -1,4 +1,5 @@
 bin
 obj
 .vs
+lmpc-*.png
 *.vcxproj.user
