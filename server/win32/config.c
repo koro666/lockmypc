@@ -110,7 +110,7 @@ HRESULT LmpcCfgSave(void)
 	return S_OK;
 }
 
-HRESULT LmpcCfgStringRead(LPCTSTR key, LPWSTR* storage, LPCTSTR fallback)
+HRESULT LmpcCfgStringRead(LPCTSTR key, LPTSTR* storage, LPCTSTR fallback)
 {
 	TCHAR buffer[1024];
 	DWORD count = GetPrivateProfileString(LmpcCfgName, key, fallback, buffer, ARRAYSIZE(buffer), LmpcCfgPath);
@@ -158,7 +158,7 @@ HRESULT LmpcCfgStringSet(HWND hDlg, int item, LPTSTR* storage)
 	return S_OK;
 }
 
-void LmpcCfgStringFree(LPWSTR* s)
+void LmpcCfgStringFree(LPTSTR* s)
 {
 	CoTaskMemFree(*s);
 	*s = NULL;

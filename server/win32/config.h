@@ -17,8 +17,8 @@ HRESULT LmpcCfgFinalize(void);
 HRESULT LmpcCfgLoad(void);
 HRESULT LmpcCfgSave(void);
 
-HRESULT LmpcCfgStringRead(LPCTSTR, LPWSTR*, LPCTSTR);
+HRESULT LmpcCfgStringRead(LPCTSTR, LPTSTR*, LPCTSTR);
 HRESULT LmpcCfgStringWrite(LPCTSTR, LPCTSTR);
 
 HRESULT LmpcCfgStringSet(HWND, int, LPTSTR*);
-void LmpcCfgStringFree(LPWSTR*);
+void LmpcCfgStringFree(LPTSTR*);

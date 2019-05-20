@@ -65,7 +65,7 @@ HRESULT LmpcUiInitialize(void)
 
 	hr = LoadIconMetric(
 		THIS_HINSTANCE,
-		MAKEINTRESOURCE(IDI_MAIN),
+		MAKEINTRESOURCEW(IDI_MAIN),
 		LIM_SMALL,
 		&LmpcUiIcon);
 
