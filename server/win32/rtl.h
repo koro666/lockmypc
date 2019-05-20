@@ -1,7 +1,10 @@
 #pragma once
+#include <winnt.h>
 
 #undef RtlFillMemory
-WINBASEAPI VOID WINAPI RtlFillMemory(VOID UNALIGNED* Destination, SIZE_T Length, UCHAR Fill);
+NTSYSAPI VOID NTAPI RtlFillMemory(VOID UNALIGNED* Destination, SIZE_T Length, UCHAR Fill);
 
 #undef RtlMoveMemory
-WINBASEAPI VOID RtlMoveMemory(VOID UNALIGNED* Destination, const VOID UNALIGNED* Source, SIZE_T Length);
+NTSYSAPI VOID NTAPI RtlMoveMemory(VOID UNALIGNED* Destination, const VOID UNALIGNED* Source, SIZE_T Length);
+
+NTSYSAPI BOOLEAN NTAPI RtlTimeToSecondsSince1970(PLARGE_INTEGER Time, PULONG ElapsedSeconds);

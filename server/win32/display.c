@@ -6,6 +6,7 @@
 #include "display.h"
 #include "resource.h"
 #include "config.h"
+#include "server.h"
 
 extern IMAGE_DOS_HEADER __ImageBase;
 #define THIS_HINSTANCE ((HINSTANCE)&__ImageBase)
@@ -145,10 +146,12 @@ LRESULT CALLBACK LmpcUiWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 	switch (uMsg)
 	{
 		case WM_CREATE:
+			LmpcSrvStart(hWnd, WM_USER+1);
 			LmpcUiCreateNotifyIcon(hWnd);
 			return 0;
 		case WM_DESTROY:
 			LmpcUiRemoveNotifyIcon(hWnd);
+			LmpcSrvStop();
 			return 0;
 		case WM_CLOSE:
 		case WM_ENDSESSION:
@@ -158,6 +161,8 @@ LRESULT CALLBACK LmpcUiWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			return LmpcUiHandleCommand(hWnd, wParam, lParam);
 		case WM_USER:
 			return LmpcUiHandleNotifyMessage(hWnd, wParam, lParam);
+		case WM_USER+1:
+			return LmpcSrvHandleSelect(wParam, lParam);
 		default:
 			if (uMsg == LmpcUiTaskbarMessage)
 			{
@@ -242,6 +247,8 @@ INT_PTR LmpcUiDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 					LmpcCfgStringSet(hWnd, IDC_SETTINGS_PORT, &LmpcCfgCurrent.Port);
 					LmpcCfgStringSet(hWnd, IDC_SETTINGS_SECRET, &LmpcCfgCurrent.Secret);
 					LmpcCfgSave();
+					LmpcSrvStop();
+					LmpcSrvStart(LmpcUiWindow, WM_USER+1);
 					// fallthrough
 				}
 				case MAKEWPARAM(IDCANCEL, BN_CLICKED):
