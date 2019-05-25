@@ -2,18 +2,24 @@
 #include <windows.h>
 #include "config.h"
 
-HRESULT LmpcUiInitialize(HLMPC_CONFIG);
-HRESULT LmpcUiFinalize(void);
-HRESULT LmpcUiRunLoop(void);
+struct _LMPC_UI;
+typedef struct _LMPC_UI LMPC_UI, *HLMPC_UI;
 
-LRESULT CALLBACK LmpcUiWndProc(HWND, UINT, WPARAM, LPARAM);
+HRESULT LmpcUiCreate(HLMPC_CONFIG, HLMPC_UI*);
+HRESULT LmpcUiDestroy(HLMPC_UI);
 
-LRESULT LmpcUiHandleCommand(HWND, WPARAM, LPARAM);
-LRESULT LmpcUiHandleNotifyMessage(HWND, WPARAM, LPARAM);
+HRESULT LmpcUiRunLoop(HLMPC_UI);
 
-INT_PTR LmpcUiDlgProc(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK LmpcUiWndProcStatic(HWND, UINT, WPARAM, LPARAM);
+LRESULT LmpcUiWndProc(HLMPC_UI, UINT, WPARAM, LPARAM);
 
-void LmpcUiCreateNotifyIcon(HWND);
-void LmpcUiRemoveNotifyIcon(HWND);
+LRESULT LmpcUiHandleCommand(HLMPC_UI, WPARAM, LPARAM);
+LRESULT LmpcUiHandleNotifyMessage(HLMPC_UI, WPARAM, LPARAM);
 
-void LmpcUiShowMenu(HWND, int, int);
+INT_PTR CALLBACK LmpcUiDlgProcStatic(HWND, UINT, WPARAM, LPARAM);
+INT_PTR LmpcUiDlgProc(HLMPC_UI, UINT, WPARAM, LPARAM);
+
+void LmpcUiCreateNotifyIcon(HLMPC_UI);
+void LmpcUiRemoveNotifyIcon(HLMPC_UI);
+
+void LmpcUiShowMenu(HLMPC_UI, int, int);

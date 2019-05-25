@@ -1,30 +1,47 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <commctrl.h>
+#include <objbase.h>
 #include <shellapi.h>
 #include <tchar.h>
 #include "display.h"
 #include "resource.h"
 #include "config.h"
 #include "server.h"
+#include "rtl.h"
 
 extern IMAGE_DOS_HEADER __ImageBase;
 #define THIS_HINSTANCE ((HINSTANCE)&__ImageBase)
 
+struct _LMPC_UI
+{
+	HLMPC_CONFIG Config;
+	HICON Icon;
+	ATOM Atom;
+	UINT TaskbarMessage;
+	HWND Window;
+	HWND Dialog;
+};
+
 static const TCHAR LmpcUiClass[] = TEXT("LockMyPC_WndClass");
 
-static HLMPC_CONFIG LmpcUiCfg;
-static HICON LmpcUiIcon;
-static ATOM LmpcUiAtom;
-static UINT LmpcUiTaskbarMessage;
-static HWND LmpcUiWindow;
-static HWND LmpcUiDialog;
-
-HRESULT LmpcUiInitialize(HLMPC_CONFIG config)
+HRESULT LmpcUiCreate(HLMPC_CONFIG config, HLMPC_UI* ui)
 {
+	if (!ui)
+		return E_POINTER;
+
+	*ui = NULL;
+	if (!config)
+		return E_INVALIDARG;
+
 	HRESULT hr = S_OK;
 
-	LmpcUiCfg = config;
+	HLMPC_UI result = CoTaskMemAlloc(sizeof(LMPC_UI));
+	if (!result)
+		return E_OUTOFMEMORY;
+	RtlZeroMemory(result, sizeof(LMPC_UI));
+
+	result->Config = config;
 
 	if (FindWindowEx(HWND_MESSAGE, NULL, LmpcUiClass, NULL))
 	{
@@ -47,20 +64,21 @@ HRESULT LmpcUiInitialize(HLMPC_CONFIG config)
 	WNDCLASSEX wcx =
 	{
 		.cbSize = sizeof(WNDCLASSEX),
-		.lpfnWndProc = LmpcUiWndProc,
+		.lpfnWndProc = LmpcUiWndProcStatic,
+		.cbWndExtra = sizeof(HLMPC_UI),
 		.hInstance = THIS_HINSTANCE,
 		.lpszClassName = LmpcUiClass
 	};
 
-	LmpcUiAtom = RegisterClassEx(&wcx);
-	if (!LmpcUiAtom)
+	result->Atom = RegisterClassEx(&wcx);
+	if (!result->Atom)
 	{
 		hr = HRESULT_FROM_WIN32(GetLastError());
 		goto leave;
 	}
 
-	LmpcUiTaskbarMessage = RegisterWindowMessage(TEXT("TaskbarCreated"));
-	if (!LmpcUiTaskbarMessage)
+	result->TaskbarMessage = RegisterWindowMessage(TEXT("TaskbarCreated"));
+	if (!result->TaskbarMessage)
 	{
 		hr = HRESULT_FROM_WIN32(GetLastError());
 		goto leave;
@@ -70,25 +88,25 @@ HRESULT LmpcUiInitialize(HLMPC_CONFIG config)
 		THIS_HINSTANCE,
 		MAKEINTRESOURCEW(IDI_MAIN),
 		LIM_SMALL,
-		&LmpcUiIcon);
+		&result->Icon);
 
 	if (FAILED(hr))
 		goto leave;
 	else
 		hr = S_OK;
 
-	LmpcUiWindow = CreateWindowEx(
+	HWND hWnd = CreateWindowEx(
 		0,
-		MAKEINTATOM(LmpcUiAtom),
+		MAKEINTATOM(result->Atom),
 		NULL,
 		WS_POPUP,
 		0, 0, 0, 0,
 		HWND_MESSAGE,
 		NULL,
 		THIS_HINSTANCE,
-		NULL);
+		result);
 
-	if (!LmpcUiWindow)
+	if (!hWnd)
 	{
 		hr = HRESULT_FROM_WIN32(GetLastError());
 		goto leave;
@@ -96,37 +114,38 @@ HRESULT LmpcUiInitialize(HLMPC_CONFIG config)
 
 leave:
 	if (FAILED(hr))
-		LmpcUiFinalize();
+	{
+		LmpcUiDestroy(result);
+		result = NULL;
+	}
 
+	*ui = result;
 	return hr;
 }
 
-HRESULT LmpcUiFinalize(void)
+HRESULT LmpcUiDestroy(HLMPC_UI ui)
 {
-	if (LmpcUiWindow)
-	{
-		DestroyWindow(LmpcUiWindow);
-		LmpcUiWindow = NULL;
-	}
+	if (!ui)
+		return S_FALSE;
 
-	if (LmpcUiIcon)
-	{
-		DestroyIcon(LmpcUiIcon);
-		LmpcUiIcon = NULL;
-	}
+	if (ui->Window)
+		DestroyWindow(ui->Window);
 
-	if (LmpcUiAtom)
-	{
-		UnregisterClass(MAKEINTATOM(LmpcUiAtom), (HINSTANCE)& __ImageBase);
-		LmpcUiAtom = 0;
-	}
+	if (ui->Icon)
+		DestroyIcon(ui->Icon);
 
-	LmpcUiCfg = NULL;
+	if (ui->Atom)
+		UnregisterClass(MAKEINTATOM(ui->Atom), (HINSTANCE)& __ImageBase);
+
+	CoTaskMemFree(ui);
 	return S_OK;
 }
 
-HRESULT LmpcUiRunLoop(void)
+HRESULT LmpcUiRunLoop(HLMPC_UI ui)
 {
+	if (!ui)
+		return E_INVALIDARG;
+
 	MSG m;
 	BOOL b;
 
@@ -135,7 +154,7 @@ HRESULT LmpcUiRunLoop(void)
 		if (b == -1)
 			return HRESULT_FROM_WIN32(GetLastError());
 
-		if (LmpcUiDialog && IsDialogMessage(LmpcUiDialog, &m))
+		if (ui->Dialog && IsDialogMessage(ui->Dialog, &m))
 			continue;
 
 		TranslateMessage(&m);
@@ -145,16 +164,46 @@ HRESULT LmpcUiRunLoop(void)
 	return S_OK;
 }
 
-LRESULT CALLBACK LmpcUiWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK LmpcUiWndProcStatic(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	HLMPC_UI ui;
+	if (uMsg == WM_NCCREATE)
+	{
+		ui = ((LPCREATESTRUCT)lParam)->lpCreateParams;
+		SetWindowLongPtr(hWnd, 0, (LONG_PTR)ui);
+		ui->Window = hWnd;
+	}
+	else
+	{
+		ui = (HLMPC_UI)GetWindowLongPtr(hWnd, 0);
+	}
+
+	LRESULT result;
+	if (ui)
+		result = LmpcUiWndProc(ui, uMsg, wParam, lParam);
+	else
+		result = DefWindowProc(hWnd, uMsg, wParam, lParam);
+
+	if (uMsg == WM_NCDESTROY)
+	{
+		if (ui)
+			ui->Window = NULL;
+		SetWindowLongPtr(hWnd, 0, 0);
+	}
+
+	return result;
+}
+
+LRESULT LmpcUiWndProc(HLMPC_UI ui, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
 		case WM_CREATE:
-			LmpcSrvStart(hWnd, WM_USER+1);
-			LmpcUiCreateNotifyIcon(hWnd);
+			LmpcSrvStart(ui->Window, WM_USER+1);
+			LmpcUiCreateNotifyIcon(ui);
 			return 0;
 		case WM_DESTROY:
-			LmpcUiRemoveNotifyIcon(hWnd);
+			LmpcUiRemoveNotifyIcon(ui);
 			LmpcSrvStop();
 			return 0;
 		case WM_CLOSE:
@@ -162,41 +211,42 @@ LRESULT CALLBACK LmpcUiWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			PostQuitMessage(0);
 			return 0;
 		case WM_COMMAND:
-			return LmpcUiHandleCommand(hWnd, wParam, lParam);
+			return LmpcUiHandleCommand(ui, wParam, lParam);
 		case WM_USER:
-			return LmpcUiHandleNotifyMessage(hWnd, wParam, lParam);
+			return LmpcUiHandleNotifyMessage(ui, wParam, lParam);
 		case WM_USER+1:
 			return LmpcSrvHandleSelect(wParam, lParam);
 		default:
-			if (uMsg == LmpcUiTaskbarMessage)
+			if (uMsg == ui->TaskbarMessage)
 			{
-				LmpcUiCreateNotifyIcon(hWnd);
+				LmpcUiCreateNotifyIcon(ui);
 				return 0;
 			}
 
-			return DefWindowProc(hWnd, uMsg, wParam, lParam);
+			return DefWindowProc(ui->Window, uMsg, wParam, lParam);
 	}
 }
 
-LRESULT LmpcUiHandleCommand(HWND hWnd, WPARAM wParam, LPARAM lParam)
+LRESULT LmpcUiHandleCommand(HLMPC_UI ui, WPARAM wParam, LPARAM lParam)
 {
 	switch (LOWORD(wParam))
 	{
 		case IDC_SETTINGS:
-			if (LmpcUiDialog)
+			if (ui->Dialog)
 			{
-				SetForegroundWindow(LmpcUiDialog);
+				SetForegroundWindow(ui->Dialog);
 			}
 			else
 			{
-				LmpcUiDialog = CreateDialogParam(THIS_HINSTANCE, MAKEINTRESOURCE(IDD_SETTINGS), NULL, LmpcUiDlgProc, 0);
-				ShowWindow(LmpcUiDialog, SW_SHOW);
+				HWND hDlg = CreateDialogParam(THIS_HINSTANCE, MAKEINTRESOURCE(IDD_SETTINGS), NULL, LmpcUiDlgProcStatic, (LPARAM)ui);
+				if (hDlg)
+					ShowWindow(hDlg, SW_SHOW);
 			}
 			break;
 		case IDC_EXIT:
-			if (LmpcUiDialog)
-				SendMessage(LmpcUiDialog, WM_CLOSE, 0, 0);
-			SendMessage(hWnd, WM_CLOSE, 0, 0);
+			if (ui->Dialog)
+				SendMessage(ui->Dialog, WM_CLOSE, 0, 0);
+			SendMessage(ui->Window, WM_CLOSE, 0, 0);
 			break;
 	}
 
@@ -204,23 +254,43 @@ LRESULT LmpcUiHandleCommand(HWND hWnd, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-LRESULT LmpcUiHandleNotifyMessage(HWND hWnd, WPARAM wParam, LPARAM lParam)
+LRESULT LmpcUiHandleNotifyMessage(HLMPC_UI ui, WPARAM wParam, LPARAM lParam)
 {
 	switch (lParam)
 	{
 		case MAKELPARAM(WM_CONTEXTMENU, 0):
-			LmpcUiShowMenu(hWnd, GET_X_LPARAM(wParam), GET_Y_LPARAM(wParam));
+			LmpcUiShowMenu(ui, GET_X_LPARAM(wParam), GET_Y_LPARAM(wParam));
 			break;
 		case MAKELPARAM(WM_LBUTTONDBLCLK, 0):
 		case MAKELPARAM(NIN_KEYSELECT, 0):
-			SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_SETTINGS, 0), 0);
+			SendMessage(ui->Window, WM_COMMAND, MAKEWPARAM(IDC_SETTINGS, 0), 0);
 			break;
 	}
 
 	return 0;
 }
 
-INT_PTR LmpcUiDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK LmpcUiDlgProcStatic(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	HLMPC_UI ui;
+	if (uMsg == WM_INITDIALOG)
+	{
+		ui = (HLMPC_UI)lParam;
+		SetWindowLongPtr(hWnd, DWLP_USER, (LONG_PTR)ui);
+		ui->Dialog = hWnd;
+	}
+	else
+	{
+		ui = (HLMPC_UI)GetWindowLongPtr(hWnd, DWLP_USER);
+	}
+
+	if (ui)
+		return LmpcUiDlgProc(ui, uMsg, wParam, lParam);
+	else
+		return FALSE;
+}
+
+INT_PTR LmpcUiDlgProc(HLMPC_UI ui, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
@@ -228,17 +298,17 @@ INT_PTR LmpcUiDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			WCHAR buffer[256];
 
-			SendDlgItemMessage(hWnd, IDC_SETTINGS_HOST, EM_LIMITTEXT, 256, 0);
+			SendDlgItemMessage(ui->Dialog, IDC_SETTINGS_HOST, EM_LIMITTEXT, 256, 0);
 			if (LoadStringW(THIS_HINSTANCE, IDS_HOST_DEFAULT, buffer, ARRAYSIZE(buffer)))
-				SendDlgItemMessage(hWnd, IDC_SETTINGS_HOST, EM_SETCUEBANNER, TRUE, (LPARAM)buffer);
-			LmpcCfgFieldToWindow(LmpcUiCfg, LMPC_CFG_ADDRESS, GetDlgItem(hWnd, IDC_SETTINGS_HOST));
+				SendDlgItemMessage(ui->Dialog, IDC_SETTINGS_HOST, EM_SETCUEBANNER, TRUE, (LPARAM)buffer);
+			LmpcCfgFieldToControl(ui->Config, LMPC_CFG_ADDRESS, ui->Dialog, IDC_SETTINGS_HOST);
 
-			SendDlgItemMessage(hWnd, IDC_SETTINGS_PORT, EM_LIMITTEXT, 5, 0);
-			LmpcCfgFieldToWindow(LmpcUiCfg, LMPC_CFG_PORT, GetDlgItem(hWnd, IDC_SETTINGS_PORT));
+			SendDlgItemMessage(ui->Dialog, IDC_SETTINGS_PORT, EM_LIMITTEXT, 5, 0);
+			LmpcCfgFieldToControl(ui->Config, LMPC_CFG_PORT, ui->Dialog, IDC_SETTINGS_PORT);
 
-			SendDlgItemMessage(hWnd, IDC_SETTINGS_PORT_SPIN, UDM_SETRANGE32, 1, 65535);
+			SendDlgItemMessage(ui->Dialog, IDC_SETTINGS_PORT_SPIN, UDM_SETRANGE32, 1, 65535);
 
-			LmpcCfgFieldToWindow(LmpcUiCfg, LMPC_CFG_SECRET, GetDlgItem(hWnd, IDC_SETTINGS_SECRET));
+			LmpcCfgFieldToControl(ui->Config, LMPC_CFG_SECRET, ui->Dialog,IDC_SETTINGS_SECRET);
 			return TRUE;
 		}
 		case WM_COMMAND:
@@ -247,18 +317,18 @@ INT_PTR LmpcUiDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
 				case MAKEWPARAM(IDOK, BN_CLICKED):
 				{
-					LmpcCfgFieldFromWindow(LmpcUiCfg, LMPC_CFG_ADDRESS, GetDlgItem(hWnd, IDC_SETTINGS_HOST));
-					LmpcCfgFieldFromWindow(LmpcUiCfg, LMPC_CFG_PORT, GetDlgItem(hWnd, IDC_SETTINGS_PORT));
-					LmpcCfgFieldFromWindow(LmpcUiCfg, LMPC_CFG_SECRET, GetDlgItem(hWnd, IDC_SETTINGS_SECRET));
-					LmpcCfgSave(LmpcUiCfg);
+					LmpcCfgFieldFromControl(ui->Config, LMPC_CFG_ADDRESS, ui->Dialog, IDC_SETTINGS_HOST);
+					LmpcCfgFieldFromControl(ui->Config, LMPC_CFG_PORT, ui->Dialog, IDC_SETTINGS_PORT);
+					LmpcCfgFieldFromControl(ui->Config, LMPC_CFG_SECRET, ui->Dialog, IDC_SETTINGS_SECRET);
+					LmpcCfgSave(ui->Config);
 					LmpcSrvStop();
-					LmpcSrvStart(LmpcUiWindow, WM_USER+1);
+					LmpcSrvStart(ui->Window, WM_USER+1);
 					// fallthrough
 				}
 				case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 				{
-					DestroyWindow(hWnd);
-					LmpcUiDialog = NULL;
+					DestroyWindow(ui->Dialog);
+					ui->Dialog = NULL;
 					return TRUE;
 				}
 			}
@@ -279,7 +349,7 @@ INT_PTR LmpcUiDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 					.lpVerb = L"open",
 					.lpFile = nmlink->item.szUrl,
 					.nShow = SW_SHOW,
-					.hMonitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST)
+					.hMonitor = MonitorFromWindow(ui->Dialog, MONITOR_DEFAULTTONEAREST)
 				};
 
 				ShellExecuteExW(&sei);
@@ -294,17 +364,17 @@ INT_PTR LmpcUiDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	}
 }
 
-void LmpcUiCreateNotifyIcon(HWND hWnd)
+void LmpcUiCreateNotifyIcon(HLMPC_UI ui)
 {
 	{
 		NOTIFYICONDATA nid =
 		{
 			.cbSize = sizeof(NOTIFYICONDATA),
-			.hWnd = hWnd,
+			.hWnd = ui->Window,
 			.uID = 0,
 			.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP | NIF_SHOWTIP,
 			.uCallbackMessage = WM_USER,
-			.hIcon = LmpcUiIcon
+			.hIcon = ui->Icon
 		};
 
 		if (!LoadString(THIS_HINSTANCE, IDS_APPNAME, nid.szTip, ARRAYSIZE(nid.szTip)))
@@ -318,7 +388,7 @@ void LmpcUiCreateNotifyIcon(HWND hWnd)
 		NOTIFYICONDATA nid =
 		{
 			.cbSize = sizeof(NOTIFYICONDATA),
-			.hWnd = hWnd,
+			.hWnd = ui->Window,
 			.uID = 0,
 			.uVersion = NOTIFYICON_VERSION_4
 		};
@@ -327,19 +397,19 @@ void LmpcUiCreateNotifyIcon(HWND hWnd)
 	}
 }
 
-void LmpcUiRemoveNotifyIcon(HWND hWnd)
+void LmpcUiRemoveNotifyIcon(HLMPC_UI ui)
 {
 	NOTIFYICONDATA nid =
 	{
 		.cbSize = sizeof(NOTIFYICONDATA),
-		.hWnd = hWnd,
+		.hWnd = ui->Window,
 		.uID = 0
 	};
 
 	Shell_NotifyIcon(NIM_DELETE, &nid);
 }
 
-void LmpcUiShowMenu(HWND hWnd, int x, int y)
+void LmpcUiShowMenu(HLMPC_UI ui, int x, int y)
 {
 	HMENU hMenu = LoadMenu(THIS_HINSTANCE, MAKEINTRESOURCE(IDR_MENU));
 	if (!hMenu)
@@ -348,7 +418,7 @@ void LmpcUiShowMenu(HWND hWnd, int x, int y)
 	HMENU hSubMenu = GetSubMenu(hMenu, 0);
 	SetMenuDefaultItem(hSubMenu, IDC_SETTINGS, FALSE);
 
-	SetForegroundWindow(hWnd);
-	TrackPopupMenu(hSubMenu, 0, x, y, 0, hWnd, NULL);
+	SetForegroundWindow(ui->Window);
+	TrackPopupMenu(hSubMenu, 0, x, y, 0, ui->Window, NULL);
 	DestroyMenu(hMenu);
 }

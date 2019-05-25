@@ -25,14 +25,15 @@ __declspec(noreturn) void WinMainCRTStartup(void)
 	if (FAILED(hr))
 		goto clean_server;
 
-	hr = LmpcUiInitialize(config);
+	HLMPC_UI ui;
+	hr = LmpcUiCreate(config, &ui);
 	if (FAILED(hr))
 		goto clean_restart;
 
-	hr = LmpcUiRunLoop();
+	hr = LmpcUiRunLoop(ui);
 
 //clean_ui:
-	LmpcUiFinalize();
+	LmpcUiDestroy(ui);
 
 clean_restart:
 	UnregisterApplicationRestart();

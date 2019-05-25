@@ -293,6 +293,24 @@ HRESULT LmpcCfgFieldFromWindow(HLMPC_CONFIG config, DWORD fid, HWND hWnd)
 	return S_OK;
 }
 
+HRESULT LmpcCfgFieldToControl(HLMPC_CONFIG config, DWORD fid, HWND hWnd, int id)
+{
+	HWND hCtl = GetDlgItem(hWnd, id);
+	if (!hCtl)
+		return HRESULT_FROM_WIN32(GetLastError());
+
+	return LmpcCfgFieldToWindow(config, fid, hCtl);
+}
+
+HRESULT LmpcCfgFieldFromControl(HLMPC_CONFIG config, DWORD fid, HWND hWnd, int id)
+{
+	HWND hCtl = GetDlgItem(hWnd, id);
+	if (!hCtl)
+		return HRESULT_FROM_WIN32(GetLastError());
+
+	return LmpcCfgFieldFromWindow(config, fid, hCtl);
+}
+
 HRESULT LmpcCfgDestroy(HLMPC_CONFIG config)
 {
 	if (!config)
