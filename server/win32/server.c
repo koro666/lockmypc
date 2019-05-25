@@ -5,67 +5,103 @@
 #include <objbase.h>
 #include "server.h"
 #include "config.h"
+#include "utility.h"
 #include "rtl.h"
 
-static HLMPC_CONFIG LmpcSrvCfg;
-static BOOL LmpcSrvWsaInitialized;
-static HCRYPTPROV LmpcSrvCryptProvider;
-static SOCKET LmpcSrvSocket;
-static LPSTR LmpcSrvSecret;
-
-HRESULT LmpcSrvInitialize(HLMPC_CONFIG config)
+struct _LMPC_SERVER
 {
-	HRESULT hr = S_OK;
+	HLMPC_CONFIG Config;
 
-	LmpcSrvCfg = config;
+	BOOL WsaInitialized;
+	HCRYPTPROV CryptProvider;
+
+	HWND Window;
+	UINT Message;
+
+	SOCKET Socket;
+	LPSTR Secret;
+};
+
+HRESULT LmpcSrvCreate(HLMPC_CONFIG config, HLMPC_SERVER* server)
+{
+	if (!server)
+		return E_POINTER;
+
+	*server = NULL;
+	if (!config)
+		return E_INVALIDARG;
+
+	HLMPC_SERVER result = CoTaskMemAlloc(sizeof(LMPC_SERVER));
+	if (!result)
+		return E_OUTOFMEMORY;
+	RtlZeroMemory(result, sizeof(LMPC_SERVER));
+
+	HRESULT hr = S_OK;
+	result->Config = config;
 
 	WSADATA wd;
 	int error = WSAStartup(MAKEWORD(2, 2), &wd);
 	if (error)
 	{
 		hr = HRESULT_FROM_WIN32(error);
-		goto exit;
+		goto leave;
 	}
 
-	LmpcSrvWsaInitialized = TRUE;
+	result->WsaInitialized = TRUE;
 
-	if (!CryptAcquireContext(&LmpcSrvCryptProvider, NULL, NULL, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
+	if (!CryptAcquireContext(&result->CryptProvider, NULL, NULL, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
 	{
 		hr = HRESULT_FROM_WIN32(GetLastError());
-		LmpcSrvCryptProvider = 0;
-		goto exit;
+		result->CryptProvider = 0;
+		goto leave;
 	}
 
-exit:
+leave:
 	if (FAILED(hr))
-		LmpcSrvFinalize();
+	{
+		LmpcSrvDestroy(result);
+		result = NULL;
+	}
+
+	*server = result;
 	return hr;
 }
 
-HRESULT LmpcSrvFinalize(void)
+HRESULT LmpcSrvDestroy(HLMPC_SERVER server)
 {
-	if (LmpcSrvCryptProvider)
-	{
-		CryptReleaseContext(LmpcSrvCryptProvider, 0);
-		LmpcSrvCryptProvider = 0;
-	}
+	if (!server)
+		return S_FALSE;
 
-	if (LmpcSrvWsaInitialized)
-	{
+	if (server->CryptProvider)
+		CryptReleaseContext(server->CryptProvider, 0);
+
+	if (server->WsaInitialized)
 		WSACleanup();
-		LmpcSrvWsaInitialized = FALSE;
-	}
 
-	LmpcSrvCfg = NULL;
+	CoTaskMemFree(server);
 	return S_OK;
 }
 
-HRESULT LmpcSrvStart(HWND hWnd, UINT uMsg)
+HRESULT LmpcSrvSetCallback(HLMPC_SERVER server, HWND hWnd, UINT uMsg)
 {
-	if (!hWnd || !uMsg)
+	if (!server)
 		return E_INVALIDARG;
 
-	if (LmpcSrvSocket)
+	server->Window = hWnd;
+	server->Message = uMsg;
+
+	return S_OK;
+}
+
+HRESULT LmpcSrvStart(HLMPC_SERVER server)
+{
+	if (!server)
+		return E_INVALIDARG;
+
+	if (!(server->Window && server->Message))
+		return E_FAIL;
+
+	if (server->Socket)
 		return S_FALSE;
 
 	static const ADDRINFOT hints =
@@ -81,7 +117,7 @@ HRESULT LmpcSrvStart(HWND hWnd, UINT uMsg)
 	ADDRINFOT * addr = NULL;
 	int result;
 
-	hr = LmpcCfgFieldGet(LmpcSrvCfg, LMPC_CFG_SECRET, &secret);
+	hr = LmpcCfgFieldGet(server->Config, LMPC_CFG_SECRET, &secret);
 	if (FAILED(hr))
 		goto leave;
 	hr = S_OK;
@@ -118,26 +154,26 @@ HRESULT LmpcSrvStart(HWND hWnd, UINT uMsg)
 		goto leave;
 	}
 
-	LmpcSrvSecret = CoTaskMemAlloc(result * sizeof(CHAR));
-	if (!LmpcSrvSecret)
+	server->Secret = CoTaskMemAlloc(result * sizeof(CHAR));
+	if (!server->Secret)
 	{
 		hr = E_OUTOFMEMORY;
 		goto leave;
 	}
 
-	result = WideCharToMultiByte(CP_UTF8, 0, wsecret, -1, LmpcSrvSecret, result, NULL, NULL);
+	result = WideCharToMultiByte(CP_UTF8, 0, wsecret, -1, server->Secret, result, NULL, NULL);
 	if (!result)
 	{
 		hr = HRESULT_FROM_WIN32(GetLastError());
 		goto leave;
 	}
 
-	hr = LmpcCfgFieldGet(LmpcSrvCfg, LMPC_CFG_ADDRESS, &host);
+	hr = LmpcCfgFieldGet(server->Config, LMPC_CFG_ADDRESS, &host);
 	if (FAILED(hr))
 		goto leave;
 	hr = S_OK;
 
-	hr = LmpcCfgFieldGet(LmpcSrvCfg, LMPC_CFG_PORT, &port);
+	hr = LmpcCfgFieldGet(server->Config, LMPC_CFG_PORT, &port);
 	if (FAILED(hr))
 		goto leave;
 	hr = S_OK;
@@ -149,21 +185,21 @@ HRESULT LmpcSrvStart(HWND hWnd, UINT uMsg)
 		goto leave;
 	}
 
-	LmpcSrvSocket = WSASocket(addr->ai_family, addr->ai_socktype, addr->ai_protocol, NULL, 0, WSA_FLAG_NO_HANDLE_INHERIT);
-	if (!LmpcSrvSocket)
+	server->Socket = WSASocket(addr->ai_family, addr->ai_socktype, addr->ai_protocol, NULL, 0, WSA_FLAG_NO_HANDLE_INHERIT);
+	if (!server->Socket)
 	{
 		hr = HRESULT_FROM_WIN32(WSAGetLastError());
 		goto leave;
 	}
 
-	result = bind(LmpcSrvSocket, addr->ai_addr, (int)addr->ai_addrlen);
+	result = bind(server->Socket, addr->ai_addr, (int)addr->ai_addrlen);
 	if (result == SOCKET_ERROR)
 	{
 		hr = HRESULT_FROM_WIN32(WSAGetLastError());
 		goto leave;
 	}
 
-	result = WSAAsyncSelect(LmpcSrvSocket, hWnd, uMsg, FD_READ);
+	result = WSAAsyncSelect(server->Socket, server->Window, server->Message, FD_READ);
 	if (result == SOCKET_ERROR)
 	{
 		hr = HRESULT_FROM_WIN32(WSAGetLastError());
@@ -172,7 +208,7 @@ HRESULT LmpcSrvStart(HWND hWnd, UINT uMsg)
 
 leave:
 	if (FAILED(hr))
-		LmpcSrvStop();
+		LmpcSrvStop(server);
 	if (addr)
 		FreeAddrInfo(addr);
 #if !UNICODE
@@ -180,31 +216,35 @@ leave:
 #endif
 	CoTaskMemFree(port);
 	CoTaskMemFree(host);
+	CoTaskMemFree(secret);
 	return hr;
 }
 
-HRESULT LmpcSrvStop(void)
+HRESULT LmpcSrvStop(HLMPC_SERVER server)
 {
-	if (LmpcSrvSocket)
+	if (!server)
+		return E_INVALIDARG;
+
+	if (server->Socket)
 	{
-		closesocket(LmpcSrvSocket);
-		LmpcSrvSocket = 0;
+		closesocket(server->Socket);
+		server->Socket = 0;
 	}
 
-	if (LmpcSrvSecret)
+	if (server->Secret)
 	{
-		CoTaskMemFree(LmpcSrvSecret);
-		LmpcSrvSecret = NULL;
+		CoTaskMemFree(server->Secret);
+		server->Secret = NULL;
 	}
 
 	return S_OK;
 }
 
-LRESULT LmpcSrvHandleSelect(WPARAM wParam, LPARAM lParam)
+LRESULT LmpcSrvHandleSelect(HLMPC_SERVER server, WPARAM wParam, LPARAM lParam)
 {
-	if (!LmpcSrvSocket)
+	if (!server->Socket)
 		return 1;
-	if (LmpcSrvSocket != (SOCKET)wParam)
+	if (server->Socket != (SOCKET)wParam)
 		return 1;
 	if (WSAGETSELECTERROR(lParam))
 		return 1;
@@ -213,22 +253,22 @@ LRESULT LmpcSrvHandleSelect(WPARAM wParam, LPARAM lParam)
 
 	LMPC_PACKET packet;
 
-	int length = recv(LmpcSrvSocket, (char*)&packet, sizeof(packet), 0);
+	int length = recv(server->Socket, (char*)&packet, sizeof(packet), 0);
 	if (length == SOCKET_ERROR)
 		return 1;
 
-	return FAILED(LmpcSrvHandlePacket(&packet, length));
+	return FAILED(LmpcSrvHandlePacket(server, &packet, length));
 }
 
-HRESULT LmpcSrvHandlePacket(const LMPC_PACKET* packet, SIZE_T length)
+HRESULT LmpcSrvHandlePacket(HLMPC_SERVER server, PCLMPC_PACKET packet, SIZE_T length)
 {
-	HRESULT hr = LmpcSrvCheckPacket(packet, length);
+	HRESULT hr = LmpcSrvCheckPacket(server, packet, length);
 	if (SUCCEEDED(hr))
 		LockWorkStation();
 	return hr;
 }
 
-HRESULT LmpcSrvCheckPacket(const LMPC_PACKET* packet, SIZE_T length)
+HRESULT LmpcSrvCheckPacket(HLMPC_SERVER server, PCLMPC_PACKET packet, SIZE_T length)
 {
 	if (length != sizeof(LMPC_PACKET))
 		return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
@@ -236,7 +276,7 @@ HRESULT LmpcSrvCheckPacket(const LMPC_PACKET* packet, SIZE_T length)
 	if (ntohl(packet->Signature) != 0x4C4F434B)
 		return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
 
-	ULONG now = LmpcSrvGetUnixTime();
+	ULONG now = GetSystemTimeAsUnixTime();
 	ULONG then = ntohl(packet->Time);
 	LONG diff = (LONG)(then - now);
 
@@ -245,7 +285,7 @@ HRESULT LmpcSrvCheckPacket(const LMPC_PACKET* packet, SIZE_T length)
 
 	HRESULT hr = S_OK;
 	HCRYPTHASH hash;
-	if (!CryptCreateHash(LmpcSrvCryptProvider, CALG_SHA_256, 0, 0, &hash))
+	if (!CryptCreateHash(server->CryptProvider, CALG_SHA_256, 0, 0, &hash))
 	{
 		hr = HRESULT_FROM_WIN32(GetLastError());
 		hash = 0;
@@ -258,7 +298,7 @@ HRESULT LmpcSrvCheckPacket(const LMPC_PACKET* packet, SIZE_T length)
 		goto leave;
 	}
 
-	if (!CryptHashData(hash, (LPBYTE)LmpcSrvSecret, lstrlenA(LmpcSrvSecret), 0))
+	if (!CryptHashData(hash, (LPBYTE)server->Secret, lstrlenA(server->Secret), 0))
 	{
 		hr = HRESULT_FROM_WIN32(GetLastError());
 		goto leave;
@@ -288,21 +328,4 @@ leave:
 	if (hash)
 		CryptDestroyHash(hash);
 	return hr;
-}
-
-ULONG LmpcSrvGetUnixTime(void)
-{
-	union
-	{
-		FILETIME ft;
-		LARGE_INTEGER li;
-	} u;
-
-	GetSystemTimeAsFileTime(&u.ft);
-
-	ULONG result;
-	if (RtlTimeToSecondsSince1970(&u.li, &result))
-		return result;
-	else
-		return 0xFFFFFFFFu;
 }

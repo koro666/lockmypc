@@ -21,3 +21,20 @@ HRESULT CoStrDup(LPCTSTR input, LPTSTR* result)
 	return S_OK;
 }
 #endif
+
+ULONG GetSystemTimeAsUnixTime(void)
+{
+	union
+	{
+		FILETIME ft;
+		LARGE_INTEGER li;
+	} u;
+
+	GetSystemTimeAsFileTime(&u.ft);
+
+	ULONG result;
+	if (RtlTimeToSecondsSince1970(&u.li, &result))
+		return result;
+	else
+		return 0xFFFFFFFFu;
+}

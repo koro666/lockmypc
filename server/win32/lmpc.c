@@ -17,7 +17,8 @@ __declspec(noreturn) void WinMainCRTStartup(void)
 	if (FAILED(hr))
 		goto clean_com;
 
-	hr = LmpcSrvInitialize(config);
+	HLMPC_SERVER server;
+	hr = LmpcSrvCreate(config, &server);
 	if (FAILED(hr))
 		goto clean_cfg;
 
@@ -26,7 +27,7 @@ __declspec(noreturn) void WinMainCRTStartup(void)
 		goto clean_server;
 
 	HLMPC_UI ui;
-	hr = LmpcUiCreate(config, &ui);
+	hr = LmpcUiCreate(config, server, &ui);
 	if (FAILED(hr))
 		goto clean_restart;
 
@@ -39,7 +40,7 @@ clean_restart:
 	UnregisterApplicationRestart();
 
 clean_server:
-	LmpcSrvFinalize();
+	LmpcSrvDestroy(server);
 
 clean_cfg:
 	LmpcCfgDestroy(config);

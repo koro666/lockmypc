@@ -1,11 +1,12 @@
 #pragma once
 #include <windows.h>
 #include "config.h"
+#include "server.h"
 
 struct _LMPC_UI;
 typedef struct _LMPC_UI LMPC_UI, *HLMPC_UI;
 
-HRESULT LmpcUiCreate(HLMPC_CONFIG, HLMPC_UI*);
+HRESULT LmpcUiCreate(HLMPC_CONFIG, HLMPC_SERVER, HLMPC_UI*);
 HRESULT LmpcUiDestroy(HLMPC_UI);
 
 HRESULT LmpcUiRunLoop(HLMPC_UI);

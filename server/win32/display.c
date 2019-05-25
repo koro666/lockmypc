@@ -16,6 +16,7 @@ extern IMAGE_DOS_HEADER __ImageBase;
 struct _LMPC_UI
 {
 	HLMPC_CONFIG Config;
+	HLMPC_SERVER Server;
 	HICON Icon;
 	ATOM Atom;
 	UINT TaskbarMessage;
@@ -25,7 +26,7 @@ struct _LMPC_UI
 
 static const TCHAR LmpcUiClass[] = TEXT("LockMyPC_WndClass");
 
-HRESULT LmpcUiCreate(HLMPC_CONFIG config, HLMPC_UI* ui)
+HRESULT LmpcUiCreate(HLMPC_CONFIG config, HLMPC_SERVER server, HLMPC_UI* ui)
 {
 	if (!ui)
 		return E_POINTER;
@@ -33,15 +34,17 @@ HRESULT LmpcUiCreate(HLMPC_CONFIG config, HLMPC_UI* ui)
 	*ui = NULL;
 	if (!config)
 		return E_INVALIDARG;
-
-	HRESULT hr = S_OK;
+	if (!server)
+		return E_INVALIDARG;
 
 	HLMPC_UI result = CoTaskMemAlloc(sizeof(LMPC_UI));
 	if (!result)
 		return E_OUTOFMEMORY;
 	RtlZeroMemory(result, sizeof(LMPC_UI));
 
+	HRESULT hr = S_OK;
 	result->Config = config;
+	result->Server = server;
 
 	if (FindWindowEx(HWND_MESSAGE, NULL, LmpcUiClass, NULL))
 	{
@@ -199,12 +202,13 @@ LRESULT LmpcUiWndProc(HLMPC_UI ui, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch (uMsg)
 	{
 		case WM_CREATE:
-			LmpcSrvStart(ui->Window, WM_USER+1);
+			LmpcSrvSetCallback(ui->Server, ui->Window, WM_USER + 1);
+			LmpcSrvStart(ui->Server);
 			LmpcUiCreateNotifyIcon(ui);
 			return 0;
 		case WM_DESTROY:
 			LmpcUiRemoveNotifyIcon(ui);
-			LmpcSrvStop();
+			LmpcSrvStop(ui->Server);
 			return 0;
 		case WM_CLOSE:
 		case WM_ENDSESSION:
@@ -215,7 +219,7 @@ LRESULT LmpcUiWndProc(HLMPC_UI ui, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case WM_USER:
 			return LmpcUiHandleNotifyMessage(ui, wParam, lParam);
 		case WM_USER+1:
-			return LmpcSrvHandleSelect(wParam, lParam);
+			return LmpcSrvHandleSelect(ui->Server, wParam, lParam);
 		default:
 			if (uMsg == ui->TaskbarMessage)
 			{
@@ -321,8 +325,8 @@ INT_PTR LmpcUiDlgProc(HLMPC_UI ui, UINT uMsg, WPARAM wParam, LPARAM lParam)
 					LmpcCfgFieldFromControl(ui->Config, LMPC_CFG_PORT, ui->Dialog, IDC_SETTINGS_PORT);
 					LmpcCfgFieldFromControl(ui->Config, LMPC_CFG_SECRET, ui->Dialog, IDC_SETTINGS_SECRET);
 					LmpcCfgSave(ui->Config);
-					LmpcSrvStop();
-					LmpcSrvStart(ui->Window, WM_USER+1);
+					LmpcSrvStop(ui->Server);
+					LmpcSrvStart(ui->Server);
 					// fallthrough
 				}
 				case MAKEWPARAM(IDCANCEL, BN_CLICKED):

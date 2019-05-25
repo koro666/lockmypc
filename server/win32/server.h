@@ -2,21 +2,26 @@
 #include <windows.h>
 #include "config.h"
 
-typedef struct
+struct _LMPC_SERVER;
+typedef struct _LMPC_SERVER LMPC_SERVER, *HLMPC_SERVER;
+
+typedef struct _LMPC_PACKET
 {
 	DWORD Signature;
 	UINT Time;
 	BYTE Hash[32];
 } LMPC_PACKET, *PLMPC_PACKET;
 
-HRESULT LmpcSrvInitialize(HLMPC_CONFIG);
-HRESULT LmpcSrvFinalize(void);
+typedef const LMPC_PACKET* PCLMPC_PACKET;
 
-HRESULT LmpcSrvStart(HWND, UINT);
-HRESULT LmpcSrvStop(void);
+HRESULT LmpcSrvCreate(HLMPC_CONFIG, HLMPC_SERVER*);
+HRESULT LmpcSrvDestroy(HLMPC_SERVER);
 
-LRESULT LmpcSrvHandleSelect(WPARAM, LPARAM);
-HRESULT LmpcSrvHandlePacket(const LMPC_PACKET*, SIZE_T);
-HRESULT LmpcSrvCheckPacket(const LMPC_PACKET*, SIZE_T);
+HRESULT LmpcSrvSetCallback(HLMPC_SERVER, HWND, UINT);
 
-ULONG LmpcSrvGetUnixTime(void);
+HRESULT LmpcSrvStart(HLMPC_SERVER);
+HRESULT LmpcSrvStop(HLMPC_SERVER);
+
+LRESULT LmpcSrvHandleSelect(HLMPC_SERVER, WPARAM, LPARAM);
+HRESULT LmpcSrvHandlePacket(HLMPC_SERVER, PCLMPC_PACKET, SIZE_T);
+HRESULT LmpcSrvCheckPacket(HLMPC_SERVER, PCLMPC_PACKET, SIZE_T);

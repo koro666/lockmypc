@@ -7,3 +7,5 @@
 #else
 HRESULT CoStrDup(LPCTSTR, LPTSTR*);
 #endif
+
+ULONG GetSystemTimeAsUnixTime(void);
