@@ -1,7 +1,8 @@
 #pragma once
 #include <windows.h>
+#include "config.h"
 
-HRESULT LmpcUiInitialize(void);
+HRESULT LmpcUiInitialize(HLMPC_CONFIG);
 HRESULT LmpcUiFinalize(void);
 HRESULT LmpcUiRunLoop(void);
 

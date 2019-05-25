@@ -13,15 +13,18 @@ extern IMAGE_DOS_HEADER __ImageBase;
 
 static const TCHAR LmpcUiClass[] = TEXT("LockMyPC_WndClass");
 
+static HLMPC_CONFIG LmpcUiCfg;
 static HICON LmpcUiIcon;
 static ATOM LmpcUiAtom;
 static UINT LmpcUiTaskbarMessage;
 static HWND LmpcUiWindow;
 static HWND LmpcUiDialog;
 
-HRESULT LmpcUiInitialize(void)
+HRESULT LmpcUiInitialize(HLMPC_CONFIG config)
 {
 	HRESULT hr = S_OK;
+
+	LmpcUiCfg = config;
 
 	if (FindWindowEx(HWND_MESSAGE, NULL, LmpcUiClass, NULL))
 	{
@@ -118,6 +121,7 @@ HRESULT LmpcUiFinalize(void)
 		LmpcUiAtom = 0;
 	}
 
+	LmpcUiCfg = NULL;
 	return S_OK;
 }
 
@@ -227,14 +231,14 @@ INT_PTR LmpcUiDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			SendDlgItemMessage(hWnd, IDC_SETTINGS_HOST, EM_LIMITTEXT, 256, 0);
 			if (LoadStringW(THIS_HINSTANCE, IDS_HOST_DEFAULT, buffer, ARRAYSIZE(buffer)))
 				SendDlgItemMessage(hWnd, IDC_SETTINGS_HOST, EM_SETCUEBANNER, TRUE, (LPARAM)buffer);
-			SetDlgItemText(hWnd, IDC_SETTINGS_HOST, LmpcCfgCurrent.Address);
+			LmpcCfgFieldToWindow(LmpcUiCfg, LMPC_CFG_ADDRESS, GetDlgItem(hWnd, IDC_SETTINGS_HOST));
 
 			SendDlgItemMessage(hWnd, IDC_SETTINGS_PORT, EM_LIMITTEXT, 5, 0);
-			SetDlgItemText(hWnd, IDC_SETTINGS_PORT, LmpcCfgCurrent.Port);
+			LmpcCfgFieldToWindow(LmpcUiCfg, LMPC_CFG_PORT, GetDlgItem(hWnd, IDC_SETTINGS_PORT));
 
 			SendDlgItemMessage(hWnd, IDC_SETTINGS_PORT_SPIN, UDM_SETRANGE32, 1, 65535);
 
-			SetDlgItemText(hWnd, IDC_SETTINGS_SECRET, LmpcCfgCurrent.Secret);
+			LmpcCfgFieldToWindow(LmpcUiCfg, LMPC_CFG_SECRET, GetDlgItem(hWnd, IDC_SETTINGS_SECRET));
 			return TRUE;
 		}
 		case WM_COMMAND:
@@ -243,10 +247,10 @@ INT_PTR LmpcUiDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
 				case MAKEWPARAM(IDOK, BN_CLICKED):
 				{
-					LmpcCfgStringSet(hWnd, IDC_SETTINGS_HOST, &LmpcCfgCurrent.Address);
-					LmpcCfgStringSet(hWnd, IDC_SETTINGS_PORT, &LmpcCfgCurrent.Port);
-					LmpcCfgStringSet(hWnd, IDC_SETTINGS_SECRET, &LmpcCfgCurrent.Secret);
-					LmpcCfgSave();
+					LmpcCfgFieldFromWindow(LmpcUiCfg, LMPC_CFG_ADDRESS, GetDlgItem(hWnd, IDC_SETTINGS_HOST));
+					LmpcCfgFieldFromWindow(LmpcUiCfg, LMPC_CFG_PORT, GetDlgItem(hWnd, IDC_SETTINGS_PORT));
+					LmpcCfgFieldFromWindow(LmpcUiCfg, LMPC_CFG_SECRET, GetDlgItem(hWnd, IDC_SETTINGS_SECRET));
+					LmpcCfgSave(LmpcUiCfg);
 					LmpcSrvStop();
 					LmpcSrvStart(LmpcUiWindow, WM_USER+1);
 					// fallthrough

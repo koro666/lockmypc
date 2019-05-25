@@ -2,23 +2,26 @@
 #include <windows.h>
 #include <tchar.h>
 
-typedef struct
-{
-	LPTSTR Address;
-	LPTSTR Port;
-	LPTSTR Secret;
-} LMPC_CONFIG, *PLMPC_CONFIG;
+struct _LMPC_CONFIG;
+typedef struct _LMPC_CONFIG LMPC_CONFIG, *HLMPC_CONFIG;
 
-extern LMPC_CONFIG LmpcCfgCurrent;
+#define LMPC_CFG_ADDRESS 0
+#define LMPC_CFG_PORT 1
+#define LMPC_CFG_SECRET 2
 
-HRESULT LmpcCfgInitialize(void);
-HRESULT LmpcCfgFinalize(void);
+HRESULT LmpcCfgGetPath(LPTSTR*);
 
-HRESULT LmpcCfgLoad(void);
-HRESULT LmpcCfgSave(void);
+HRESULT LmpcCfgLoad(HLMPC_CONFIG*);
+HRESULT LmpcCfgLoadFromPath(LPCTSTR, HLMPC_CONFIG*);
 
-HRESULT LmpcCfgStringRead(LPCTSTR, LPTSTR*, LPCTSTR);
-HRESULT LmpcCfgStringWrite(LPCTSTR, LPCTSTR);
+HRESULT LmpcCfgSave(HLMPC_CONFIG);
 
-HRESULT LmpcCfgStringSet(HWND, int, LPTSTR*);
-void LmpcCfgStringFree(LPTSTR*);
+HRESULT LmpcCfgFieldRead(HLMPC_CONFIG, DWORD);
+HRESULT LmpcCfgFieldWrite(HLMPC_CONFIG, DWORD);
+
+HRESULT LmpcCfgFieldGet(HLMPC_CONFIG, DWORD, LPTSTR*);
+
+HRESULT LmpcCfgFieldToWindow(HLMPC_CONFIG, DWORD, HWND);
+HRESULT LmpcCfgFieldFromWindow(HLMPC_CONFIG, DWORD, HWND);
+
+HRESULT LmpcCfgDestroy(HLMPC_CONFIG);

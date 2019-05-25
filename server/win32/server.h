@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+#include "config.h"
 
 typedef struct
 {
@@ -8,7 +9,7 @@ typedef struct
 	BYTE Hash[32];
 } LMPC_PACKET, *PLMPC_PACKET;
 
-HRESULT LmpcSrvInitialize(void);
+HRESULT LmpcSrvInitialize(HLMPC_CONFIG);
 HRESULT LmpcSrvFinalize(void);
 
 HRESULT LmpcSrvStart(HWND, UINT);

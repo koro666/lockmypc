@@ -90,6 +90,7 @@
       <Optimization>Disabled</Optimization>
     </ClCompile>
     <ClCompile Include="server.c" />
+    <ClCompile Include="utility.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="lmpc.rc" />
@@ -100,6 +101,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="rtl.h" />
     <ClInclude Include="server.h" />
+    <ClInclude Include="utility.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

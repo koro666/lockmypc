@@ -7,14 +7,17 @@
 #include "config.h"
 #include "rtl.h"
 
+static HLMPC_CONFIG LmpcSrvCfg;
 static BOOL LmpcSrvWsaInitialized;
 static HCRYPTPROV LmpcSrvCryptProvider;
 static SOCKET LmpcSrvSocket;
 static LPSTR LmpcSrvSecret;
 
-HRESULT LmpcSrvInitialize(void)
+HRESULT LmpcSrvInitialize(HLMPC_CONFIG config)
 {
 	HRESULT hr = S_OK;
+
+	LmpcSrvCfg = config;
 
 	WSADATA wd;
 	int error = WSAStartup(MAKEWORD(2, 2), &wd);
@@ -53,6 +56,7 @@ HRESULT LmpcSrvFinalize(void)
 		LmpcSrvWsaInitialized = FALSE;
 	}
 
+	LmpcSrvCfg = NULL;
 	return S_OK;
 }
 
@@ -72,14 +76,20 @@ HRESULT LmpcSrvStart(HWND hWnd, UINT uMsg)
 	};
 
 	HRESULT hr = S_OK;
+	LPTSTR secret = NULL, host = NULL, port = NULL;
 	LPWSTR wsecret = NULL;
 	ADDRINFOT * addr = NULL;
 	int result;
 
+	hr = LmpcCfgFieldGet(LmpcSrvCfg, LMPC_CFG_SECRET, &secret);
+	if (FAILED(hr))
+		goto leave;
+	hr = S_OK;
+
 #if UNICODE
-	wsecret = LmpcCfgCurrent.Secret;
+	wsecret = secret;
 #else
-	result = MultiByteToWideChar(CP_ACP, 0, LmpcCfgCurrent.Secret, -1, NULL, 0);
+	result = MultiByteToWideChar(CP_ACP, 0, secret, -1, NULL, 0);
 	if (!result)
 	{
 		hr = HRESULT_FROM_WIN32(GetLastError());
@@ -93,7 +103,7 @@ HRESULT LmpcSrvStart(HWND hWnd, UINT uMsg)
 		goto leave;
 	}
 
-	result = MultiByteToWideChar(CP_ACP, 0, LmpcCfgCurrent.Secret, -1, wsecret, result);
+	result = MultiByteToWideChar(CP_ACP, 0, secret, -1, wsecret, result);
 	if (!result)
 	{
 		hr = HRESULT_FROM_WIN32(GetLastError());
@@ -122,7 +132,17 @@ HRESULT LmpcSrvStart(HWND hWnd, UINT uMsg)
 		goto leave;
 	}
 
-	result = GetAddrInfo(*LmpcCfgCurrent.Address ? LmpcCfgCurrent.Address : NULL, LmpcCfgCurrent.Port, &hints, &addr);
+	hr = LmpcCfgFieldGet(LmpcSrvCfg, LMPC_CFG_ADDRESS, &host);
+	if (FAILED(hr))
+		goto leave;
+	hr = S_OK;
+
+	hr = LmpcCfgFieldGet(LmpcSrvCfg, LMPC_CFG_PORT, &port);
+	if (FAILED(hr))
+		goto leave;
+	hr = S_OK;
+
+	result = GetAddrInfo(*host ? host : NULL, port, &hints, &addr);
 	if (result)
 	{
 		hr = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, result);
@@ -156,9 +176,10 @@ leave:
 	if (addr)
 		FreeAddrInfo(addr);
 #if !UNICODE
-	if (wsecret)
-		CoTaskMemFree(wsecret);
+	CoTaskMemFree(wsecret);
 #endif
+	CoTaskMemFree(port);
+	CoTaskMemFree(host);
 	return hr;
 }
 
