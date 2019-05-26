@@ -12,7 +12,7 @@ def send(address, port, secret):
 	packet = b'LOCK' + now_bytes + hash_bytes
 	print("Packet: {}".format(packet.hex()))
 
-	with socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as sock:
+	with socket.socket(socket.AF_INET6 if ':' in address else socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as sock:
 		sock.sendto(packet, 0, (address, port))
 
 def main(argv):

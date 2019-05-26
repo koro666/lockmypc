@@ -34,7 +34,7 @@ def handle(address, port, secret, packet):
     return True
 
 def serve(address, port, secret):
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as sock:
+    with socket.socket(socket.AF_INET6 if ':' in address else socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as sock:
         sock.bind((address, port))
         while True:
             packet, source = sock.recvfrom(40);
