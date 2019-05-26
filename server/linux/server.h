@@ -20,7 +20,7 @@ struct lmpc_packet
 };
 
 int srv_run_cfg(const struct lmpc_cfg*);
-int srv_run_addr(const struct addrinfo*, const struct lmpc_srv_ctx*);
-int srv_run_sock(int, const struct lmpc_srv_ctx*);
+int srv_run_addrs(const struct addrinfo*, const struct lmpc_srv_ctx*);
+int srv_run_socks(const int*, size_t, const struct lmpc_srv_ctx*);
 void srv_handle_packet(const struct lmpc_packet*, ssize_t, const struct sockaddr*, socklen_t, const struct lmpc_srv_ctx*);
 bool srv_check_packet(const struct lmpc_packet*, ssize_t, const struct lmpc_srv_ctx*);

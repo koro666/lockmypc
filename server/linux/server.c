@@ -1,6 +1,8 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
+#include <sys/select.h>
 #include <sys/socket.h>
+#include <errno.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <stdbool.h>
@@ -34,48 +36,107 @@ int srv_run_cfg(const struct lmpc_cfg* cfg)
 		.command = cfg->command
 	};
 
-	result = srv_run_addr(addr, &ctx);
+	result = srv_run_addrs(addr, &ctx);
 	freeaddrinfo(addr);
 	return result;
 }
 
-int srv_run_addr(const struct addrinfo* addr, const struct lmpc_srv_ctx* ctx)
+int srv_run_addrs(const struct addrinfo* addr, const struct lmpc_srv_ctx* ctx)
 {
-	int fd = socket(addr->ai_family, addr->ai_socktype | SOCK_CLOEXEC, addr->ai_protocol);
-	if (fd == -1)
+	size_t depth = 0;
+	for (const struct addrinfo* caddr = addr; caddr; caddr = caddr->ai_next)
+		++depth;
+
+	int fds[depth];
+	size_t count = 0;
+
+	for (const struct addrinfo* caddr = addr; caddr; caddr = caddr->ai_next)
 	{
-		perror("socket");
-		return 1;
+		int fd = socket(caddr->ai_family, caddr->ai_socktype | SOCK_CLOEXEC, caddr->ai_protocol);
+		if (fd == -1)
+		{
+			perror("socket");
+			continue;
+		}
+
+#ifdef __linux__
+		if (caddr->ai_family == AF_INET6)
+		{
+			int value = 1;
+			if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &value, sizeof(value)))
+				perror("setsockopt");
+		}
+#endif
+
+		if (bind(fd, caddr->ai_addr, caddr->ai_addrlen) == -1)
+		{
+			perror("bind");
+			close(fd);
+			continue;
+		}
+
+		fds[count++] = fd;
 	}
 
-	if (bind(fd, addr->ai_addr, addr->ai_addrlen) == -1)
-	{
-		perror("bind");
-		close(fd);
-		return 1;
-	}
+	if (!count)
+		return count != depth;
 
-	int result = srv_run_sock(fd, ctx);
-	close(fd);
+	int result = srv_run_socks(fds, count, ctx);
+
+	for (size_t i = 0; i < count; ++i)
+		close(fds[i]);
+
 	return result;
 }
 
-int srv_run_sock(int fd, const struct lmpc_srv_ctx* ctx)
+int srv_run_socks(const int* fds, size_t count, const struct lmpc_srv_ctx* ctx)
 {
 	while (true)
 	{
-		struct sockaddr_storage addr;
-		struct lmpc_packet packet;
-		socklen_t addrlen = sizeof(struct sockaddr_storage);
+		fd_set rfds;
+		FD_ZERO(&rfds);
+		int nfds = 0;
 
-		ssize_t result = recvfrom(fd, &packet, sizeof(packet), MSG_TRUNC, (struct sockaddr*)&addr, &addrlen);
-		if (result == -1)
+		for (size_t i = 0; i < count; ++i)
 		{
-			perror("recvfrom");
+			int fd = fds[i];
+			FD_SET(fd, &rfds);
+
+			int x = fd + 1;
+			if (x > nfds)
+				nfds = x;
+		}
+
+		int iresult;
+		do { iresult = select(nfds, &rfds, NULL, NULL, NULL); } while (iresult == -1 && errno == EINTR);
+
+		if (iresult == -1)
+		{
+			perror("select");
 			return 1;
 		}
 
-		srv_handle_packet(&packet, result, (struct sockaddr*)&addr, addrlen, ctx);
+		for (size_t i = 0; i < count; ++i)
+		{
+			int fd = fds[i];
+			if (!FD_ISSET(fd, &rfds))
+				continue;
+
+			struct sockaddr_storage addr;
+			struct lmpc_packet packet;
+			socklen_t addrlen = sizeof(struct sockaddr_storage);
+
+			ssize_t sresult;
+			do { sresult = recvfrom(fd, &packet, sizeof(packet), MSG_TRUNC, (struct sockaddr*)&addr, &addrlen); } while (sresult == -1 && errno == EINTR);
+
+			if (sresult == -1)
+			{
+				perror("recvfrom");
+				return 1;
+			}
+
+			srv_handle_packet(&packet, sresult, (struct sockaddr*)&addr, addrlen, ctx);
+		}
 	}
 }
 
