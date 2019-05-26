@@ -18,7 +18,8 @@ struct _LMPC_SERVER
 	HWND Window;
 	UINT Message;
 
-	SOCKET Socket;
+	UINT SocketCount;
+	SOCKET* SocketArray;
 	LPSTR Secret;
 };
 
@@ -101,7 +102,7 @@ HRESULT LmpcSrvStart(HLMPC_SERVER server)
 	if (!(server->Window && server->Message))
 		return E_FAIL;
 
-	if (server->Socket)
+	if (server->SocketArray)
 		return S_FALSE;
 
 	static const ADDRINFOT hints =
@@ -114,7 +115,7 @@ HRESULT LmpcSrvStart(HLMPC_SERVER server)
 	HRESULT hr = S_OK;
 	LPTSTR secret = NULL, host = NULL, port = NULL;
 	LPWSTR wsecret = NULL;
-	ADDRINFOT * addr = NULL;
+	ADDRINFOT *addr = NULL;
 	int result;
 
 	hr = LmpcCfgFieldGet(server->Config, LMPC_CFG_SECRET, &secret);
@@ -185,25 +186,52 @@ HRESULT LmpcSrvStart(HLMPC_SERVER server)
 		goto leave;
 	}
 
-	server->Socket = WSASocket(addr->ai_family, addr->ai_socktype, addr->ai_protocol, NULL, 0, WSA_FLAG_NO_HANDLE_INHERIT);
-	if (!server->Socket)
+	UINT depth = 0;
+	for (ADDRINFOT* caddr = addr; caddr; caddr = caddr->ai_next)
+		++depth;
+
+	server->SocketArray = CoTaskMemAlloc(depth * sizeof(SOCKET));
+	if (!server->SocketArray)
 	{
-		hr = HRESULT_FROM_WIN32(WSAGetLastError());
+		hr = E_OUTOFMEMORY;
 		goto leave;
 	}
 
-	result = bind(server->Socket, addr->ai_addr, (int)addr->ai_addrlen);
-	if (result == SOCKET_ERROR)
+	for (ADDRINFOT* caddr = addr; caddr; caddr = caddr->ai_next)
 	{
-		hr = HRESULT_FROM_WIN32(WSAGetLastError());
-		goto leave;
+		SOCKET sock;
+
+		sock = WSASocket(caddr->ai_family, caddr->ai_socktype, caddr->ai_protocol, NULL, 0, WSA_FLAG_NO_HANDLE_INHERIT);
+		if (!sock)
+		{
+			hr = HRESULT_FROM_WIN32(WSAGetLastError());
+			continue;
+		}
+
+		result = bind(sock, caddr->ai_addr, (int)caddr->ai_addrlen);
+		if (result == SOCKET_ERROR)
+		{
+			hr = HRESULT_FROM_WIN32(WSAGetLastError());
+			closesocket(sock);
+			continue;
+		}
+
+		result = WSAAsyncSelect(sock, server->Window, server->Message, FD_READ);
+		if (result == SOCKET_ERROR)
+		{
+			hr = HRESULT_FROM_WIN32(WSAGetLastError());
+			closesocket(sock);
+			continue;
+		}
+
+		server->SocketArray[server->SocketCount++] = sock;
+		hr = S_OK;
 	}
 
-	result = WSAAsyncSelect(server->Socket, server->Window, server->Message, FD_READ);
-	if (result == SOCKET_ERROR)
+	if (server->SocketCount != depth)
 	{
-		hr = HRESULT_FROM_WIN32(WSAGetLastError());
-		goto leave;
+		if (server->SocketCount)
+			hr = S_FALSE;
 	}
 
 leave:
@@ -225,10 +253,14 @@ HRESULT LmpcSrvStop(HLMPC_SERVER server)
 	if (!server)
 		return E_INVALIDARG;
 
-	if (server->Socket)
+	if (server->SocketArray)
 	{
-		closesocket(server->Socket);
-		server->Socket = 0;
+		for (UINT i = 0; i < server->SocketCount; ++i)
+			closesocket(server->SocketArray[i]);
+
+		CoTaskMemFree(server->SocketArray);
+		server->SocketArray = NULL;
+		server->SocketCount = 0;
 	}
 
 	if (server->Secret)
@@ -242,9 +274,21 @@ HRESULT LmpcSrvStop(HLMPC_SERVER server)
 
 LRESULT LmpcSrvHandleSelect(HLMPC_SERVER server, WPARAM wParam, LPARAM lParam)
 {
-	if (!server->Socket)
+	if (!server->SocketArray)
 		return 1;
-	if (server->Socket != (SOCKET)wParam)
+
+	SOCKET sock = (SOCKET)wParam;
+	BOOL valid = FALSE;
+	for (UINT i = 0; i < server->SocketCount; ++i)
+	{
+		if (server->SocketArray[i] == sock)
+		{
+			valid = TRUE;
+			break;
+		}
+	}
+
+	if (!valid)
 		return 1;
 	if (WSAGETSELECTERROR(lParam))
 		return 1;
@@ -253,7 +297,7 @@ LRESULT LmpcSrvHandleSelect(HLMPC_SERVER server, WPARAM wParam, LPARAM lParam)
 
 	LMPC_PACKET packet;
 
-	int length = recv(server->Socket, (char*)&packet, sizeof(packet), 0);
+	int length = recv(sock, (char*)&packet, sizeof(packet), 0);
 	if (length == SOCKET_ERROR)
 		return 1;
 
