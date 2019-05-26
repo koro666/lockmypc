@@ -307,8 +307,13 @@ LRESULT LmpcSrvHandleSelect(HLMPC_SERVER server, WPARAM wParam, LPARAM lParam)
 HRESULT LmpcSrvHandlePacket(HLMPC_SERVER server, PCLMPC_PACKET packet, SIZE_T length)
 {
 	HRESULT hr = LmpcSrvCheckPacket(server, packet, length);
-	if (SUCCEEDED(hr))
+	if (SUCCEEDED(hr)
+#ifdef _DEBUG
+		&& !IsDebuggerPresent()
+#endif
+		)
 		LockWorkStation();
+
 	return hr;
 }
 
