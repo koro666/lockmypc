@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 	<string name="app_name">LockMyPC</string>
+	<string name="host_port_format">%s:%s</string>
 </resources>
