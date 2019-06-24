@@ -145,7 +145,10 @@ public class MainActivity extends AppCompatActivity
 		builder.setNegativeButton(R.string.host_dialog_cancel, null);
 
 		final AlertDialog dialog = builder.create();
-		dialog.create();
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+			dialog.create();
+		else
+			dialog.show();
 
 		EditText edit = (EditText)dialog.findViewById(R.id.host_name);
 		edit.setText(entry.getName());
@@ -171,6 +174,7 @@ public class MainActivity extends AppCompatActivity
 			}
 		});
 
-		dialog.show();
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+			dialog.show();
 	}
 }

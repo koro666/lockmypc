@@ -30,7 +30,7 @@ android
 	defaultConfig
 	{
 		applicationId "net.kzxiv.lockmypc.client"
-		minSdkVersion 23
+		minSdkVersion 19
 		targetSdkVersion 26
 		versionCode 1
 		versionName "1.0"
