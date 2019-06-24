@@ -1,6 +1,8 @@
 package net.kzxiv.lockmypc.client;
 
 import android.content.*;
+import android.database.*;
+import android.database.sqlite.*;
 import android.os.*;
 import android.view.*;
 import android.widget.*;
@@ -188,7 +190,38 @@ public class HostAdapter extends BaseAdapter
 		{
 			ArrayList<Entry> result = new ArrayList<Entry>();
 
-			// TODO:
+			HostDatabaseOpenHelper helper = null;
+			try
+			{
+				helper = new HostDatabaseOpenHelper(_context);
+				SQLiteDatabase db = helper.getReadableDatabase();
+
+				Cursor cursor = db.rawQuery("SELECT id, name, host, port, secret FROM hosts ORDER BY name COLLATE NOCASE ASC", new String[0]);
+				try
+				{
+					while (cursor.moveToNext())
+					{
+						Entry entry = new Entry(
+							cursor.getLong(0),
+							cursor.getString(1),
+							cursor.getString(2),
+							cursor.getString(3),
+							cursor.getString(4));
+
+						result.add(entry);
+					}
+
+				}
+				finally
+				{
+					cursor.close();
+				}
+			}
+			finally
+			{
+				if (helper != null)
+					helper.close();
+			}
 
 			return result;
 		}
@@ -217,8 +250,33 @@ public class HostAdapter extends BaseAdapter
 		{
 			Entry entry = entries[0];
 
-			// TODO:
-			int id = 0;
+			HostDatabaseOpenHelper helper = null;
+			long id;
+			try
+			{
+				helper = new HostDatabaseOpenHelper(_context);
+				SQLiteDatabase db = helper.getWritableDatabase();
+
+				SQLiteStatement stmt = db.compileStatement("INSERT INTO hosts (name, host, port, secret) VALUES(?, ?, ?, ?)");
+				try
+				{
+					stmt.bindString(1, entry.getName());
+					stmt.bindString(2, entry.getHost());
+					stmt.bindString(3, entry.getPort());
+					stmt.bindString(4, entry.getSecret());
+
+					id = stmt.executeInsert();
+				}
+				finally
+				{
+					stmt.close();
+				}
+			}
+			finally
+			{
+				if (helper != null)
+					helper.close();
+			}
 
 			return entry.withId(id);
 		}
@@ -247,7 +305,33 @@ public class HostAdapter extends BaseAdapter
 		{
 			Entry entry = entries[0];
 
-			// TODO:
+			HostDatabaseOpenHelper helper = null;
+			try
+			{
+				helper = new HostDatabaseOpenHelper(_context);
+				SQLiteDatabase db = helper.getWritableDatabase();
+
+				SQLiteStatement stmt = db.compileStatement("UPDATE hosts SET name = ?, host = ?, port = ?, secret = ? WHERE id = ?");
+				try
+				{
+					stmt.bindString(1, entry.getName());
+					stmt.bindString(2, entry.getHost());
+					stmt.bindString(3, entry.getPort());
+					stmt.bindString(4, entry.getSecret());
+					stmt.bindLong(5, entry.getId());
+
+					stmt.executeUpdateDelete();
+				}
+				finally
+				{
+					stmt.close();
+				}
+			}
+			finally
+			{
+				if (helper != null)
+					helper.close();
+			}
 
 			return null;
 		}
@@ -275,7 +359,28 @@ public class HostAdapter extends BaseAdapter
 		{
 			Entry entry = entries[0];
 
-			// TODO:
+			HostDatabaseOpenHelper helper = null;
+			try
+			{
+				helper = new HostDatabaseOpenHelper(_context);
+				SQLiteDatabase db = helper.getWritableDatabase();
+
+				SQLiteStatement stmt = db.compileStatement("DELETE FROM hosts WHERE id = ?");
+				try
+				{
+					stmt.bindLong(1, entry.getId());
+					stmt.executeUpdateDelete();
+				}
+				finally
+				{
+					stmt.close();
+				}
+			}
+			finally
+			{
+				if (helper != null)
+					helper.close();
+			}
 
 			return entry;
 		}
@@ -285,6 +390,26 @@ public class HostAdapter extends BaseAdapter
 		{
 			_entries.remove(result);
 			notifyDataSetChanged();
+		}
+	}
+
+	private final class HostDatabaseOpenHelper extends SQLiteOpenHelper
+	{
+		public HostDatabaseOpenHelper(Context context)
+		{
+			super(context, "hosts.sqlite", null, 1);
+			setWriteAheadLoggingEnabled(true);
+		}
+
+		@Override
+		public void onCreate(SQLiteDatabase db)
+		{
+			db.execSQL("CREATE TABLE hosts (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE, name TEXT NOT NULL, host TEXT NOT NULL, port TEXT NOT NULL, secret TEXT NOT NULL)");
+		}
+
+		@Override
+		public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion)
+		{
 		}
 	}
 }
