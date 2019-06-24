@@ -4,6 +4,7 @@ import android.content.*;
 import android.os.*;
 import android.support.design.widget.*;
 import android.support.v7.app.*;
+import android.text.*;
 import android.view.*;
 import android.widget.*;
 
@@ -143,7 +144,7 @@ public class MainActivity extends AppCompatActivity
 
 		builder.setNegativeButton(R.string.host_dialog_cancel, null);
 
-		AlertDialog dialog = builder.create();
+		final AlertDialog dialog = builder.create();
 		dialog.create();
 
 		EditText edit = (EditText)dialog.findViewById(R.id.host_name);
@@ -157,6 +158,18 @@ public class MainActivity extends AppCompatActivity
 
 		edit = (EditText)dialog.findViewById(R.id.host_secret);
 		edit.setText(entry.getSecret());
+		edit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+
+		CheckBox check = (CheckBox)dialog.findViewById(R.id.host_secret_show);
+		check.setOnCheckedChangeListener(new CheckBox.OnCheckedChangeListener()
+		{
+			@Override
+			public void onCheckedChanged(CompoundButton button, boolean b)
+			{
+				EditText edit = (EditText)dialog.findViewById(R.id.host_secret);
+				edit.setInputType(InputType.TYPE_CLASS_TEXT | (b ? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD : InputType.TYPE_TEXT_VARIATION_PASSWORD));
+			}
+		});
 
 		dialog.show();
 	}

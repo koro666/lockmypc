@@ -40,4 +40,10 @@
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
 		android:inputType="textPassword"/>
+
+	<CheckBox
+		android:id="@+id/host_secret_show"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:text="@string/host_dialog_secret_show"/>
 </LinearLayout>
