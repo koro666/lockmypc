@@ -8,7 +8,8 @@
 
 		<activity
 			android:name=".MainActivity"
-			android:theme="@style/AppTheme">
+			android:theme="@style/AppTheme"
+			android:configChanges="orientation|screenSize|keyboardHidden">
 
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN"/>

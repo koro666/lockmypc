@@ -29,7 +29,7 @@ public class HostAdapter extends BaseAdapter
 		{
 			_id = id;
 			_name = neverNull(name, "Untitled");
-			_host = neverNull(host, "host");
+			_host = neverNull(host, "hostname");
 			_port = neverNull(port, "43666");
 			_secret = neverNull(secret, "default");
 		}
@@ -38,6 +38,11 @@ public class HostAdapter extends BaseAdapter
 		public String toString()
 		{
 			return _name;
+		}
+
+		public final Entry withId(long id)
+		{
+			return new Entry(id, _name, _host, _port, _secret);
 		}
 
 		public final long getId()
@@ -93,6 +98,15 @@ public class HostAdapter extends BaseAdapter
 		private static final String neverNull(String value, String other)
 		{
 			return value == null ? other : value;
+		}
+	}
+
+	public final static class EntryNameComparator implements Comparator<Entry>
+	{
+		@Override
+		public int compare(Entry left, Entry right)
+		{
+			return left.getName().compareToIgnoreCase(right.getName());
 		}
 	}
 
@@ -162,14 +176,6 @@ public class HostAdapter extends BaseAdapter
 		return view;
 	}
 
-	public final void load()
-	{
-		ArrayList<Entry> result = loadInternal();
-		_entries.clear();
-		_entries.addAll(result);
-		notifyDataSetChanged();
-	}
-
 	public final void loadAsync()
 	{
 		new LoadAsyncTask().execute();
@@ -180,7 +186,11 @@ public class HostAdapter extends BaseAdapter
 		@Override
 		protected ArrayList<Entry> doInBackground(Void... unused)
 		{
-			return loadInternal();
+			ArrayList<Entry> result = new ArrayList<Entry>();
+
+			// TODO:
+
+			return result;
 		}
 
 		@Override
@@ -192,15 +202,89 @@ public class HostAdapter extends BaseAdapter
 		}
 	}
 
-	public final ArrayList<Entry> loadInternal()
+	public final void addAsync(Entry entry)
 	{
-		ArrayList<Entry> result = new ArrayList<Entry>();
+		if (entry == null)
+			throw new IllegalArgumentException();
 
-		// TODO:
-		try { Thread.sleep(500); } catch (InterruptedException ex) {}
-		for (long l = 0; l < 200; ++l)
-			result.add(new Entry(l, String.format("Host #%d", l), null, null, null));
+		new AddAsyncTask().execute(entry);
+	}
 
-		return result;
+	private final class AddAsyncTask extends AsyncTask<Entry, Void, Entry>
+	{
+		@Override
+		protected Entry doInBackground(Entry... entries)
+		{
+			Entry entry = entries[0];
+
+			// TODO:
+			int id = 0;
+
+			return entry.withId(id);
+		}
+
+		@Override
+		protected void onPostExecute(Entry entry)
+		{
+			_entries.add(entry);
+			Collections.sort(_entries, new EntryNameComparator());
+			notifyDataSetChanged();
+		}
+	}
+
+	public final void updateAsync(Entry entry)
+	{
+		if (entry == null)
+			throw new IllegalArgumentException();
+
+		new UpdateAsyncTask().execute(entry);
+	}
+
+	private final class UpdateAsyncTask extends AsyncTask<Entry, Void, Void>
+	{
+		@Override
+		protected Void doInBackground(Entry... entries)
+		{
+			Entry entry = entries[0];
+
+			// TODO:
+
+			return null;
+		}
+
+		@Override
+		protected void onPostExecute(Void aVoid)
+		{
+			Collections.sort(_entries, new EntryNameComparator());
+			notifyDataSetChanged();
+		}
+	}
+
+	public final void removeAsync(Entry entry)
+	{
+		if (entry == null)
+			throw new IllegalArgumentException();
+
+		new RemoveAsyncTask().execute(entry);
+	}
+
+	private final class RemoveAsyncTask extends AsyncTask<Entry, Void, Entry>
+	{
+		@Override
+		protected Entry doInBackground(Entry... entries)
+		{
+			Entry entry = entries[0];
+
+			// TODO:
+
+			return entry;
+		}
+
+		@Override
+		protected void onPostExecute(Entry result)
+		{
+			_entries.remove(result);
+			notifyDataSetChanged();
+		}
 	}
 }

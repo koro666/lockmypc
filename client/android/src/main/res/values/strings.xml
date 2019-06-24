@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 	<string name="app_name">LockMyPC</string>
+
 	<string name="host_port_format">%s:%s</string>
+
+	<string name="host_modify">Modify</string>
+	<string name="host_remove">Remove</string>
+
+	<string name="host_add_long">Add New Machine</string>
+	<string name="host_modify_long">Modify Machine</string>
+
+	<string name="host_dialog_add">Add</string>
+	<string name="host_dialog_save">Save</string>
+	<string name="host_dialog_cancel">Cancel</string>
 </resources>

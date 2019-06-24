@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical"
+	android:paddingLeft="24dip"
+	android:paddingTop="8dip"
+	android:paddingRight="24dip">
+
+	<EditText
+		android:id="@+id/host_name"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:inputType="text"/>
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal">
+
+		<EditText
+			android:id="@+id/host_host"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_weight="3"
+			android:inputType="text"
+			android:maxLength="256"/>
+
+		<EditText
+			android:id="@+id/host_port"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:inputType="number"
+			android:maxLength="5"/>
+	</LinearLayout>
+
+	<EditText
+		android:id="@+id/host_secret"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:inputType="textPassword"/>
+</LinearLayout>
