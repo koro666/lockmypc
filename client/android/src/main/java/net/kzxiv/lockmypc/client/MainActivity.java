@@ -32,7 +32,7 @@ public class MainActivity extends AppCompatActivity
 			@Override
 			public void onItemClick(AdapterView<?> adapterView, View view, int i, long l)
 			{
-				onEntryClick((HostAdapter.Entry)view.getTag());
+				onEntryClick(view, (HostAdapter.Entry)view.getTag());
 			}
 		});
 
@@ -99,9 +99,38 @@ public class MainActivity extends AppCompatActivity
 		}
 	}
 
-	private final void onEntryClick(HostAdapter.Entry entry)
+	private final void onEntryClick(final View view, final HostAdapter.Entry entry)
 	{
-		// TODO:
+		Intent intent = new Intent(this, PacketService.class);
+
+		intent.putExtra(PacketService.EXTRA_HOST, entry.getHost());
+		intent.putExtra(PacketService.EXTRA_PORT, entry.getPort());
+		intent.putExtra(PacketService.EXTRA_SECRET, entry.getSecret());
+		intent.putExtra(PacketService.EXTRA_RESULT, new ResultReceiver(new Handler())
+		{
+			@Override
+			protected void onReceiveResult(int result, Bundle bundle)
+			{
+				String name = entry.getName();
+				if (name.length() <= 0)
+					name = getString(R.string.host_default_name);
+
+				Snackbar bar;
+				if (result == 0)
+				{
+					bar = Snackbar.make(view, String.format(getString(R.string.packet_success_format), name), Snackbar.LENGTH_SHORT);
+				}
+				else
+				{
+					String error = bundle.getString(PacketService.EXTRA_ERROR);
+					bar = Snackbar.make(view, String.format(getString(R.string.packet_failure_format), name, error), Snackbar.LENGTH_LONG);
+				}
+
+				bar.show();
+			}
+		});
+
+		startService(intent);
 	}
 
 	private final void onAddClick()

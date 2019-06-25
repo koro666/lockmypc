@@ -23,4 +23,7 @@
 	<string name="host_dialog_cancel">Cancel</string>
 	<string name="host_dialog_remove">Remove</string>
 	<string name="host_dialog_keep">Keep</string>
+
+	<string name="packet_success_format">Sent lock command to \"%s\".</string>
+	<string name="packet_failure_format">Error sending lock command to \"%s\":\n%s</string>
 </resources>
