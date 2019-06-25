@@ -3,6 +3,10 @@ package net.kzxiv.lockmypc.client;
 import android.app.*;
 import android.content.*;
 import android.os.*;
+import java.io.*;
+import java.net.*;
+import java.nio.charset.*;
+import java.security.*;
 
 public class PacketService extends IntentService
 {
@@ -44,9 +48,75 @@ public class PacketService extends IntentService
 		receiver.send(result, bundle);
 	}
 
+	private static final byte[] makePacket(String secret) throws IOException, NoSuchAlgorithmException
+	{
+		int now = (int)(System.currentTimeMillis() / 1000L);
+
+		byte[] nowBytes = intToBytes(now);
+		byte[] secretBytes = secret.getBytes(Charset.forName("UTF-8"));
+
+		MessageDigest digest = MessageDigest.getInstance("SHA-256");
+		digest.update(nowBytes);
+		digest.update(secretBytes);
+		byte[] hash = digest.digest();
+
+		byte[] result = new byte[4 + nowBytes.length + hash.length];
+		result[0] = 0x4c;
+		result[1] = 0x4f;
+		result[2] = 0x43;
+		result[3] = 0x4b;
+
+		System.arraycopy(nowBytes, 0, result, 4, nowBytes.length);
+		System.arraycopy(hash, 0, result,4 + nowBytes.length, hash.length);
+		return result;
+	}
+
+	private static final byte[] intToBytes(int input) throws IOException
+	{
+		ByteArrayOutputStream strm0 = null;
+		DataOutputStream strm1 = null;
+		try
+		{
+			strm0 = new ByteArrayOutputStream();
+			strm1 = new DataOutputStream(strm0);
+
+			strm1.writeInt(input);
+
+			strm1.flush();
+			return strm0.toByteArray();
+		}
+		finally
+		{
+			if (strm1 != null)
+				strm1.close();
+			if (strm0 != null)
+				strm0.close();
+		}
+	}
+
 	private static final void sendPacket(String host, String port, String secret) throws Exception
 	{
-		// TODO:
-		throw new Exception("Not implemented yet.");
+		byte[] packet = makePacket(secret);
+		sendPacket(host, port, packet);
+	}
+
+	private static final void sendPacket(String host, String port, byte[] data) throws IOException
+	{
+		InetAddress address = InetAddress.getByName(host);
+		int iport = Integer.parseInt(port);
+
+		DatagramSocket socket = null;
+		try
+		{
+			socket = new DatagramSocket();
+
+			DatagramPacket packet = new DatagramPacket(data, data.length, address, iport);
+			socket.send(packet);
+		}
+		finally
+		{
+			if (socket != null)
+				socket.close();
+		}
 	}
 }
