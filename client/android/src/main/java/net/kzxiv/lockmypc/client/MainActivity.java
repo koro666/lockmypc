@@ -20,7 +20,7 @@ public class MainActivity extends AppCompatActivity
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		final ListView list = findViewById(R.id.host_list);
+		ListView list = findViewById(R.id.host_list);
 
 		_adapter = new HostAdapter(this);
 		list.setAdapter(_adapter);
@@ -186,19 +186,19 @@ public class MainActivity extends AppCompatActivity
 
 					AlertDialog dialog = (AlertDialog)dialogInterface;
 
-					EditText edit = (EditText)dialog.findViewById(R.id.host_name);
+					EditText edit = dialog.findViewById(R.id.host_name);
 					String text = edit.getText().toString();
 					entry.setName(text);
 
-					edit = (EditText)dialog.findViewById(R.id.host_host);
+					edit = dialog.findViewById(R.id.host_host);
 					text = edit.getText().toString();
 					entry.setHost(text.length() > 0 ? text : getString(R.string.host_default_host));
 
-					edit = (EditText)dialog.findViewById(R.id.host_port);
+					edit = dialog.findViewById(R.id.host_port);
 					text = edit.getText().toString();
 					entry.setPort(text.length() > 0 ? text : getString(R.string.host_default_port));
 
-					edit = (EditText)dialog.findViewById(R.id.host_secret);
+					edit = dialog.findViewById(R.id.host_secret);
 					text = edit.getText().toString();
 					entry.setSecret(text);
 
@@ -217,26 +217,26 @@ public class MainActivity extends AppCompatActivity
 		else
 			dialog.show();
 
-		EditText edit = (EditText)dialog.findViewById(R.id.host_name);
+		EditText edit = dialog.findViewById(R.id.host_name);
 		edit.setText(entry.getName());
 
-		edit = (EditText)dialog.findViewById(R.id.host_host);
+		edit = dialog.findViewById(R.id.host_host);
 		edit.setText(entry.getHost());
 
-		edit = (EditText)dialog.findViewById(R.id.host_port);
+		edit = dialog.findViewById(R.id.host_port);
 		edit.setText(entry.getPort());
 
-		edit = (EditText)dialog.findViewById(R.id.host_secret);
+		edit = dialog.findViewById(R.id.host_secret);
 		edit.setText(entry.getSecret());
 		edit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
-		CheckBox check = (CheckBox)dialog.findViewById(R.id.host_secret_show);
+		CheckBox check = dialog.findViewById(R.id.host_secret_show);
 		check.setOnCheckedChangeListener(new CheckBox.OnCheckedChangeListener()
 		{
 			@Override
 			public void onCheckedChanged(CompoundButton button, boolean b)
 			{
-				EditText edit = (EditText)dialog.findViewById(R.id.host_secret);
+				EditText edit = dialog.findViewById(R.id.host_secret);
 				edit.setInputType(InputType.TYPE_CLASS_TEXT | (b ? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD : InputType.TYPE_TEXT_VARIATION_PASSWORD));
 			}
 		});
