@@ -1,23 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
 	android:layout_width="match_parent"
 	android:layout_height="wrap_content"
 	android:gravity="center_vertical"
 	android:minHeight="48dp"
-	android:orientation="vertical"
+	android:orientation="horizontal"
 	android:padding="12dip">
 
-	<TextView
-		android:id="@+id/host_name"
-		android:layout_width="match_parent"
+	<ImageView
+		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
-		android:singleLine="true"
-		android:textAppearance="@style/TextAppearance.AppCompat.Title"/>
+		android:tint="@color/colorPrimaryDark"
+		app:srcCompat="@drawable/host" />
 
-	<TextView
-		android:id="@+id/host_extra"
+	<LinearLayout
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:singleLine="true"
-		android:textAppearance="@style/TextAppearance.AppCompat.Body1"/>
+		android:layout_marginLeft="8dip"
+		android:gravity="center_vertical"
+		android:orientation="vertical">
+
+		<TextView
+			android:id="@+id/host_name"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:singleLine="true"
+			android:textAppearance="@style/TextAppearance.AppCompat.Title"/>
+
+		<TextView
+			android:id="@+id/host_extra"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:singleLine="true"
+			android:textAppearance="@style/TextAppearance.AppCompat.Body1"/>
+	</LinearLayout>
 </LinearLayout>
