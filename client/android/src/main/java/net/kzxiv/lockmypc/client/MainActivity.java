@@ -58,7 +58,12 @@ public class MainActivity extends AppCompatActivity
 			HostAdapter.Entry entry = (HostAdapter.Entry)info.targetView.getTag();
 
 			getMenuInflater().inflate(R.menu.menu_host, menu);
-			menu.setHeaderTitle(entry.getName());
+
+			String name = entry.getName();
+			if (name.length() > 0)
+				menu.setHeaderTitle(name);
+			else
+				menu.setHeaderTitle(R.string.host_default_name);
 		}
 		else
 		{
@@ -82,7 +87,7 @@ public class MainActivity extends AppCompatActivity
 					editEntry(entry, false);
 					return true;
 				case R.id.host_remove:
-					_adapter.removeAsync(entry);
+					removeEntry(entry);
 					return true;
 				default:
 					return false;
@@ -102,7 +107,36 @@ public class MainActivity extends AppCompatActivity
 	private final void onAddClick()
 	{
 		HostAdapter.Entry entry = new HostAdapter.Entry(-1);
+		entry.setSecret(getString(R.string.host_default_secret));
 		editEntry(entry, true);
+	}
+
+	private final void removeEntry(final HostAdapter.Entry entry)
+	{
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle(R.string.host_remove_long);
+
+		String name = entry.getName();
+		builder.setMessage(
+			String.format(
+				getString(R.string.host_dialog_remove_format),
+				name.length() > 0 ? name : getString(R.string.host_default_name)));
+
+		builder.setPositiveButton(R.string.host_dialog_remove,
+			new AlertDialog.OnClickListener()
+			{
+				@Override
+				public void onClick(DialogInterface dialogInterface, int i)
+				{
+					if (i == DialogInterface.BUTTON_POSITIVE)
+						_adapter.removeAsync(entry);
+				}
+			});
+
+		builder.setNegativeButton(R.string.host_dialog_keep, null);
+
+		AlertDialog dialog = builder.create();
+		dialog.show();
 	}
 
 	private final void editEntry(final HostAdapter.Entry entry, final boolean isNew)
@@ -124,16 +158,20 @@ public class MainActivity extends AppCompatActivity
 					AlertDialog dialog = (AlertDialog)dialogInterface;
 
 					EditText edit = (EditText)dialog.findViewById(R.id.host_name);
-					entry.setName(edit.getText().toString());
+					String text = edit.getText().toString();
+					entry.setName(text);
 
 					edit = (EditText)dialog.findViewById(R.id.host_host);
-					entry.setHost(edit.getText().toString());
+					text = edit.getText().toString();
+					entry.setHost(text.length() > 0 ? text : getString(R.string.host_default_host));
 
 					edit = (EditText)dialog.findViewById(R.id.host_port);
-					entry.setPort(edit.getText().toString());
+					text = edit.getText().toString();
+					entry.setPort(text.length() > 0 ? text : getString(R.string.host_default_port));
 
 					edit = (EditText)dialog.findViewById(R.id.host_secret);
-					entry.setSecret(edit.getText().toString());
+					text = edit.getText().toString();
+					entry.setSecret(text);
 
 					if (isNew)
 						_adapter.addAsync(entry);

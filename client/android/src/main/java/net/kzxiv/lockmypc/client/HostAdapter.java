@@ -30,10 +30,10 @@ public class HostAdapter extends BaseAdapter
 		public Entry(long id, String name, String host, String port, String secret)
 		{
 			_id = id;
-			_name = neverNull(name, "Untitled");
-			_host = neverNull(host, "hostname");
-			_port = neverNull(port, "43666");
-			_secret = neverNull(secret, "default");
+			_name = neverNull(name);
+			_host = neverNull(host);
+			_port = neverNull(port);
+			_secret = neverNull(secret);
 		}
 
 		@Override
@@ -95,11 +95,6 @@ public class HostAdapter extends BaseAdapter
 		private static final String neverNull(String value)
 		{
 			return value == null ? "" : value;
-		}
-
-		private static final String neverNull(String value, String other)
-		{
-			return value == null ? other : value;
 		}
 	}
 
@@ -165,7 +160,11 @@ public class HostAdapter extends BaseAdapter
 		TextView text;
 		text = view.findViewById(R.id.host_name);
 
-		text.setText(entry.getName());
+		String name = entry.getName();
+		if (name.length() > 0)
+			text.setText(name);
+		else
+			text.setText(R.string.host_default_name);
 
 		text = view.findViewById(R.id.host_extra);
 		text.setText(

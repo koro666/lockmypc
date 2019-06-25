@@ -11,7 +11,8 @@
 		android:id="@+id/host_name"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:inputType="text"/>
+		android:inputType="text"
+		android:hint="@string/host_default_name" />
 
 	<LinearLayout
 		android:layout_width="match_parent"
@@ -24,7 +25,8 @@
 			android:layout_height="wrap_content"
 			android:layout_weight="3"
 			android:inputType="text"
-			android:maxLength="256"/>
+			android:maxLength="256"
+			android:hint="@string/host_default_host" />
 
 		<EditText
 			android:id="@+id/host_port"
@@ -32,7 +34,8 @@
 			android:layout_height="wrap_content"
 			android:layout_weight="1"
 			android:inputType="number"
-			android:maxLength="5"/>
+			android:maxLength="5"
+			android:hint="@string/host_default_port" />
 	</LinearLayout>
 
 	<EditText

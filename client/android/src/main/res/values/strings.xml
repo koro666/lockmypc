@@ -2,6 +2,11 @@
 <resources>
 	<string name="app_name">LockMyPC</string>
 
+	<string name="host_default_name">Untitled</string>
+	<string name="host_default_host">192.168.0.1</string>
+	<string name="host_default_port">43666</string>
+	<string name="host_default_secret">default</string>
+
 	<string name="host_port_format">%s:%s</string>
 
 	<string name="host_modify">Modify</string>
@@ -9,9 +14,13 @@
 
 	<string name="host_add_long">Add New Machine</string>
 	<string name="host_modify_long">Modify Machine</string>
+	<string name="host_remove_long">Remove Machine</string>
 
 	<string name="host_dialog_secret_show">Show secret key</string>
+	<string name="host_dialog_remove_format">Really remove \"%s\"?</string>
 	<string name="host_dialog_add">Add</string>
 	<string name="host_dialog_save">Save</string>
 	<string name="host_dialog_cancel">Cancel</string>
+	<string name="host_dialog_remove">Remove</string>
+	<string name="host_dialog_keep">Keep</string>
 </resources>
