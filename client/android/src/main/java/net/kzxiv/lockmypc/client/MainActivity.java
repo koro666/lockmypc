@@ -126,10 +126,14 @@ public class MainActivity extends AppCompatActivity
 					bar = Snackbar.make(view, String.format(getString(R.string.packet_failure_format), name, error), Snackbar.LENGTH_LONG);
 				}
 
+				entry.leaveBusy();
+				HostAdapter.updateSpinner(view, entry.isBusy());
 				bar.show();
 			}
 		});
 
+		entry.enterBusy();
+		HostAdapter.updateSpinner(view, entry.isBusy());
 		startService(intent);
 	}
 

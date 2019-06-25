@@ -17,6 +17,7 @@ public class HostAdapter extends BaseAdapter
 	public final static class Entry
 	{
 		private final long _id;
+		private int _busy;
 		private String _name;
 		private String _host;
 		private String _port;
@@ -50,6 +51,21 @@ public class HostAdapter extends BaseAdapter
 		public final long getId()
 		{
 			return _id;
+		}
+
+		public final boolean isBusy()
+		{
+			return _busy > 0;
+		}
+
+		public final void enterBusy()
+		{
+			++_busy;
+		}
+
+		public final void leaveBusy()
+		{
+			--_busy;
 		}
 
 		public final String getName()
@@ -157,6 +173,9 @@ public class HostAdapter extends BaseAdapter
 		if (view == null)
 			view = _inflater.inflate(R.layout.content, null);
 
+
+		updateSpinner(view, entry.isBusy());
+
 		TextView text;
 		text = view.findViewById(R.id.host_name);
 
@@ -175,6 +194,15 @@ public class HostAdapter extends BaseAdapter
 
 		view.setTag(entry);
 		return view;
+	}
+
+	public final static void updateSpinner(View view, boolean spinning)
+	{
+		ImageView image = view.findViewById(R.id.host_image);
+		image.setVisibility(spinning ? View.GONE : View.VISIBLE);
+
+		ProgressBar spinner = view.findViewById(R.id.host_spinner);
+		spinner.setVisibility(spinning ? View.VISIBLE : View.GONE);
 	}
 
 	public final void loadAsync()
